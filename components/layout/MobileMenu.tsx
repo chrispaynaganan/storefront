@@ -1,8 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { SearchBar } from '@/components/layout/SearchBar'
 import type { User } from '@/types'
 
 const NAV_LINKS = [
@@ -20,7 +21,6 @@ interface Props { user: User | null }
 
 export function MobileMenu({ user }: Props) {
   const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState('')
   const router = useRouter()
   const supabase = createClient()
 
@@ -31,22 +31,15 @@ export function MobileMenu({ user }: Props) {
     router.refresh()
   }
 
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
-    const trimmed = query.trim()
-    setOpen(false)
-    if (trimmed) {
-      router.push(`/products?q=${encodeURIComponent(trimmed)}`)
-    } else {
-      router.push('/products')
-    }
-  }
-
   return (
     <div className="sm:hidden">
       {/* Hamburger */}
-      <button onClick={() => setOpen(!open)}
-        className="p-1.5 text-brown" aria-label="Toggle menu" aria-expanded={open}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="p-1.5 text-brown"
+        aria-label="Toggle menu"
+        aria-expanded={open}
+      >
         {open ? (
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
@@ -60,32 +53,30 @@ export function MobileMenu({ user }: Props) {
 
       {open && (
         <>
+          {/* Backdrop */}
           <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setOpen(false)} />
+
+          {/* Panel */}
           <div className="fixed top-14 left-0 right-0 bottom-0 z-50 bg-whitewash overflow-y-auto">
 
             {/* Search */}
             <div className="px-4 pt-4 pb-3 border-b border-peach-light">
-              <form onSubmit={handleSearch} className="relative flex items-center">
-                <svg className="absolute left-3 w-4 h-4 text-brown-light shrink-0 pointer-events-none"
-                  fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0Z" />
-                </svg>
-                <input
-                  type="search"
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  placeholder="Search products..."
-                  autoFocus
-                  className="w-full bg-whitewash-off rounded-full h-10 pl-9 pr-4 text-[14px] text-brown placeholder:text-brown-light/60 focus:outline-none focus:ring-2 focus:ring-peach"
-                />
-              </form>
+              <Suspense fallback={null}>
+                <SearchBar onNavigate={() => setOpen(false)} />
+              </Suspense>
             </div>
 
             {/* Nav links */}
             <nav className="px-2 py-3 border-b border-peach-light">
               {NAV_LINKS.map(({ label, href, sale }) => (
-                <Link key={label} href={href} onClick={() => setOpen(false)}
-                  className={`block px-4 py-3 text-[15px] rounded-lg transition-colors hover:bg-whitewash-off ${sale ? 'text-red-600' : 'text-brown'}`}>
+                <Link
+                  key={label}
+                  href={href}
+                  onClick={() => setOpen(false)}
+                  className={`block px-4 py-3 text-[15px] rounded-lg transition-colors hover:bg-whitewash-off ${
+                    sale ? 'text-red-600' : 'text-brown'
+                  }`}
+                >
                   {label}
                 </Link>
               ))}
@@ -111,8 +102,10 @@ export function MobileMenu({ user }: Props) {
                     className="block px-4 py-3 text-[15px] text-brown rounded-lg hover:bg-whitewash-off transition-colors">
                     Addresses
                   </Link>
-                  <button onClick={handleSignOut}
-                    className="w-full text-left px-4 py-3 text-[15px] text-red-600 rounded-lg hover:bg-whitewash-off transition-colors mt-1">
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full text-left px-4 py-3 text-[15px] text-red-600 rounded-lg hover:bg-whitewash-off transition-colors mt-1"
+                  >
                     Sign out
                   </button>
                 </>

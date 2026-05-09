@@ -14,7 +14,7 @@ export function ProductCard({ product, favoritedIds }: ProductCardProps) {
   const defaultVariant = product.variants?.[0]
   return (
     <Link href={`/products/${product.slug}`} className="group block">
-      <div className="relative aspect-[3/4] bg-[#F2EDE8] rounded-xl overflow-hidden mb-3">
+      <div className="relative aspect-3/4 bg-whitewash rounded-xl overflow-hidden mb-3">
         {product.image_urls[0] && (
           <Image
             src={product.image_urls[0]}
@@ -37,7 +37,7 @@ export function ProductCard({ product, favoritedIds }: ProductCardProps) {
           />
         </div>
       </div>
-      <p className="text-sm font-medium text-[#3B1F0E]">{product.name}</p>
+      <p className="text-sm font-medium text-brown">{product.name}</p>
       {defaultVariant && (
         <ProductPrice
           price={defaultVariant.price}
