@@ -61,10 +61,10 @@ export function FavoriteButton({
         rounded-full transition-all duration-200
         ${buttonSize}
         ${favorited
-          ? 'text-[#3B1F0E]'
-          : 'text-[#3B1F0E]/40 hover:text-[#3B1F0E]/80'
+          ? 'text-brown'
+          : 'text-brown/40 <hover:text-brown></hover:text-brown>/80'
         }
-        hover:bg-[#FFCBA4]/30
+        hover:bg-peach/30
         disabled:opacity-50
         ${className}
       `}
