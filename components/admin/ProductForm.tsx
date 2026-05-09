@@ -80,7 +80,6 @@ export function ProductForm({ productId, initialData, collections }: Props) {
       }
 
       if (pid) {
-        // delete old variants then re-insert
         if (productId) await supabase.from('variants').delete().eq('product_id', pid)
         await supabase.from('variants').insert(
           variants.filter(v => v.price).map(v => ({
@@ -106,7 +105,7 @@ export function ProductForm({ productId, initialData, collections }: Props) {
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
       {/* Basic info */}
-      <div className="bg-white rounded-xl border border-[#FFE8D6] p-6 space-y-4">
+      <div className="bg-white rounded-xl border border-[#FFE8D6] p-4 md:p-6 space-y-4">
         <h2 className="text-sm font-medium text-[#3B1F0E]">Basic info</h2>
         <Input label="Product name" value={name}
           onChange={e => { setName(e.target.value); if (!productId) setSlug(slugify(e.target.value)) }} />
@@ -126,13 +125,13 @@ export function ProductForm({ productId, initialData, collections }: Props) {
       </div>
 
       {/* Images */}
-      <div className="bg-white rounded-xl border border-[#FFE8D6] p-6 space-y-4">
+      <div className="bg-white rounded-xl border border-[#FFE8D6] p-4 md:p-6 space-y-4">
         <h2 className="text-sm font-medium text-[#3B1F0E]">Images</h2>
         <ImageUploader value={images} onChange={setImages} />
       </div>
 
       {/* Variants */}
-      <div className="bg-white rounded-xl border border-[#FFE8D6] p-6 space-y-4">
+      <div className="bg-white rounded-xl border border-[#FFE8D6] p-4 md:p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-medium text-[#3B1F0E]">Variants & pricing</h2>
           <button type="button" onClick={addVariant}
@@ -140,48 +139,104 @@ export function ProductForm({ productId, initialData, collections }: Props) {
             + Add size
           </button>
         </div>
-        <div className="grid grid-cols-5 gap-2 text-xs text-[#6B3A22] font-medium mb-1">
+
+        {/* Desktop grid header */}
+        <div className="hidden md:grid grid-cols-5 gap-2 text-xs text-[#6B3A22] font-medium">
           <span>Size</span><span>Price (₱)</span><span>Compare at (₱)</span><span>Stock</span><span>SKU</span>
         </div>
-        {variants.map((v, i) => (
-          <div key={i} className="grid grid-cols-5 gap-2 items-center">
-            <select
-              value={v.size}
-              onChange={e => updateVariant(i, 'size', e.target.value)}
-              className="px-2 py-2 rounded-lg border border-[#FFE8D6] text-sm text-[#3B1F0E] bg-white focus:outline-none"
-            >
-              {SIZES.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <input value={v.price} onChange={e => updateVariant(i, 'price', e.target.value)}
-              placeholder="890" type="number"
-              className="px-2 py-2 rounded-lg border border-[#FFE8D6] text-sm text-[#3B1F0E] focus:outline-none focus:ring-1 focus:ring-[#FFCBA4]" />
-            <input value={v.compare_at_price} onChange={e => updateVariant(i, 'compare_at_price', e.target.value)}
-              placeholder="1200" type="number"
-              className="px-2 py-2 rounded-lg border border-[#FFE8D6] text-sm text-[#3B1F0E] focus:outline-none focus:ring-1 focus:ring-[#FFCBA4]" />
-            <input value={v.stock_qty} onChange={e => updateVariant(i, 'stock_qty', e.target.value)}
-              placeholder="10" type="number"
-              className="px-2 py-2 rounded-lg border border-[#FFE8D6] text-sm text-[#3B1F0E] focus:outline-none focus:ring-1 focus:ring-[#FFCBA4]" />
-            <div className="flex gap-1">
-              <input value={v.sku} onChange={e => updateVariant(i, 'sku', e.target.value)}
-                placeholder="SKU-001"
-                className="flex-1 min-w-0 px-2 py-2 rounded-lg border border-[#FFE8D6] text-sm text-[#3B1F0E] focus:outline-none focus:ring-1 focus:ring-[#FFCBA4]" />
-              {variants.length > 1 && (
-                <button type="button" onClick={() => removeVariant(i)}
-                  className="text-[#6B3A22] hover:text-red-500 px-1 text-lg leading-none">×</button>
-              )}
+
+        {/* Desktop grid rows */}
+        <div className="hidden md:block space-y-2">
+          {variants.map((v, i) => (
+            <div key={i} className="grid grid-cols-5 gap-2 items-center">
+              <select
+                value={v.size}
+                onChange={e => updateVariant(i, 'size', e.target.value)}
+                className="px-2 py-2 rounded-lg border border-[#FFE8D6] text-sm text-[#3B1F0E] bg-white focus:outline-none"
+              >
+                {SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <input value={v.price} onChange={e => updateVariant(i, 'price', e.target.value)}
+                placeholder="890" type="number"
+                className="px-2 py-2 rounded-lg border border-[#FFE8D6] text-sm text-[#3B1F0E] focus:outline-none focus:ring-1 focus:ring-[#FFCBA4]" />
+              <input value={v.compare_at_price} onChange={e => updateVariant(i, 'compare_at_price', e.target.value)}
+                placeholder="1200" type="number"
+                className="px-2 py-2 rounded-lg border border-[#FFE8D6] text-sm text-[#3B1F0E] focus:outline-none focus:ring-1 focus:ring-[#FFCBA4]" />
+              <input value={v.stock_qty} onChange={e => updateVariant(i, 'stock_qty', e.target.value)}
+                placeholder="10" type="number"
+                className="px-2 py-2 rounded-lg border border-[#FFE8D6] text-sm text-[#3B1F0E] focus:outline-none focus:ring-1 focus:ring-[#FFCBA4]" />
+              <div className="flex gap-1">
+                <input value={v.sku} onChange={e => updateVariant(i, 'sku', e.target.value)}
+                  placeholder="SKU-001"
+                  className="flex-1 min-w-0 px-2 py-2 rounded-lg border border-[#FFE8D6] text-sm text-[#3B1F0E] focus:outline-none focus:ring-1 focus:ring-[#FFCBA4]" />
+                {variants.length > 1 && (
+                  <button type="button" onClick={() => removeVariant(i)}
+                    className="text-[#6B3A22] hover:text-red-500 px-1 text-lg leading-none">×</button>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+
+        {/* Mobile stacked cards */}
+        <div className="md:hidden space-y-3">
+          {variants.map((v, i) => (
+            <div key={i} className="border border-[#FFE8D6] rounded-lg p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-[#3B1F0E]">Size</label>
+                {variants.length > 1 && (
+                  <button type="button" onClick={() => removeVariant(i)}
+                    className="text-xs text-[#6B3A22] hover:text-red-500">
+                    Remove
+                  </button>
+                )}
+              </div>
+              <select
+                value={v.size}
+                onChange={e => updateVariant(i, 'size', e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-[#FFE8D6] text-sm text-[#3B1F0E] bg-white focus:outline-none"
+              >
+                {SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-[#6B3A22] mb-1">Price (₱)</label>
+                  <input value={v.price} onChange={e => updateVariant(i, 'price', e.target.value)}
+                    placeholder="890" type="number"
+                    className="w-full px-3 py-2 rounded-lg border border-[#FFE8D6] text-sm text-[#3B1F0E] focus:outline-none focus:ring-1 focus:ring-[#FFCBA4]" />
+                </div>
+                <div>
+                  <label className="block text-xs text-[#6B3A22] mb-1">Compare at (₱)</label>
+                  <input value={v.compare_at_price} onChange={e => updateVariant(i, 'compare_at_price', e.target.value)}
+                    placeholder="1200" type="number"
+                    className="w-full px-3 py-2 rounded-lg border border-[#FFE8D6] text-sm text-[#3B1F0E] focus:outline-none focus:ring-1 focus:ring-[#FFCBA4]" />
+                </div>
+                <div>
+                  <label className="block text-xs text-[#6B3A22] mb-1">Stock</label>
+                  <input value={v.stock_qty} onChange={e => updateVariant(i, 'stock_qty', e.target.value)}
+                    placeholder="10" type="number"
+                    className="w-full px-3 py-2 rounded-lg border border-[#FFE8D6] text-sm text-[#3B1F0E] focus:outline-none focus:ring-1 focus:ring-[#FFCBA4]" />
+                </div>
+                <div>
+                  <label className="block text-xs text-[#6B3A22] mb-1">SKU</label>
+                  <input value={v.sku} onChange={e => updateVariant(i, 'sku', e.target.value)}
+                    placeholder="SKU-001"
+                    className="w-full px-3 py-2 rounded-lg border border-[#FFE8D6] text-sm text-[#3B1F0E] focus:outline-none focus:ring-1 focus:ring-[#FFCBA4]" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Settings */}
-      <div className="bg-white rounded-xl border border-[#FFE8D6] p-6 space-y-4">
+      <div className="bg-white rounded-xl border border-[#FFE8D6] p-4 md:p-6 space-y-4">
         <h2 className="text-sm font-medium text-[#3B1F0E]">Settings</h2>
         <Toggle checked={isBestseller} onChange={setIsBestseller} label="Mark as bestseller" />
         <Toggle checked={isActive} onChange={setIsActive} label="Active (visible on store)" />
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 pb-4">
         <Button type="submit" disabled={saving}
           className="bg-[#3B1F0E] text-white hover:bg-[#6B3A22] px-8 py-3 rounded-lg">
           {saving ? 'Saving...' : productId ? 'Save changes' : 'Add product'}

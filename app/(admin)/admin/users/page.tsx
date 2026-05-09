@@ -14,12 +14,40 @@ export default async function AdminUsersPage() {
 
   return (
     <div>
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl font-light text-[#3B1F0E]">Customers</h1>
         <p className="text-sm text-[#6B3A22] mt-1">{users?.length ?? 0} total</p>
       </div>
 
-      <div className="bg-white rounded-xl border border-[#FFE8D6] overflow-hidden">
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {users?.map(user => (
+          <div key={user.id} className="bg-white rounded-xl border border-[#FFE8D6] p-4 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-medium text-[#3B1F0E] text-sm">{user.full_name || '—'}</p>
+                <p className="text-xs text-[#6B3A22] mt-0.5">{user.email}</p>
+              </div>
+              <Badge variant={user.role === 'admin' ? 'brown' : 'peach'}>{user.role}</Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge variant={user.is_active ? 'success' : 'danger'}>
+                  {user.is_active ? 'Active' : 'Inactive'}
+                </Badge>
+                <span className="text-xs text-[#6B3A22]">{formatDate(user.created_at)}</span>
+              </div>
+              <UserActions userId={user.id} isActive={user.is_active} role={user.role} />
+            </div>
+          </div>
+        ))}
+        {(!users || users.length === 0) && (
+          <div className="py-16 text-center text-sm text-[#6B3A22]">No customers yet.</div>
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block bg-white rounded-xl border border-[#FFE8D6] overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-[#FAF7F4] border-b border-[#FFE8D6]">
             <tr>

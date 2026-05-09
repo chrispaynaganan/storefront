@@ -13,8 +13,6 @@ export default function AdminPromosPage() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [saving, setSaving] = useState(false)
-
-  // form fields
   const [code, setCode] = useState('')
   const [type, setType] = useState<'percent' | 'fixed'>('percent')
   const [value, setValue] = useState('')
@@ -25,14 +23,8 @@ export default function AdminPromosPage() {
 
   async function load() {
     const supabase = createClient()
-    const { data: p } = await supabase
-      .from('promos')
-      .select('*, product:products(name)')
-      .order('created_at', { ascending: false })
-    const { data: prods } = await supabase
-      .from('products')
-      .select('id, name')
-      .eq('is_active', true)
+    const { data: p } = await supabase.from('promos').select('*, product:products(name)').order('created_at', { ascending: false })
+    const { data: prods } = await supabase.from('products').select('id, name').eq('is_active', true)
     setPromos(p ?? [])
     setProducts(prods ?? [])
   }
@@ -60,13 +52,9 @@ export default function AdminPromosPage() {
     setSaving(true)
     const supabase = createClient()
     const data = {
-      code: code.toUpperCase(),
-      type,
-      value: parseFloat(value),
-      product_id: productId || null,
-      starts_at: startsAt || null,
-      ends_at: endsAt || null,
-      is_active: isActive,
+      code: code.toUpperCase(), type, value: parseFloat(value),
+      product_id: productId || null, starts_at: startsAt || null,
+      ends_at: endsAt || null, is_active: isActive,
     }
     if (editing) {
       await supabase.from('promos').update(data).eq('id', editing.id)
@@ -93,92 +81,55 @@ export default function AdminPromosPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-light text-[#3B1F0E]">Promos & discounts</h1>
           <p className="text-sm text-[#6B3A22] mt-1">{promos.length} total</p>
         </div>
         <Button onClick={openNew}
-          className="bg-[#3B1F0E] text-white hover:bg-[#6B3A22] rounded-lg px-5 py-2.5 text-sm">
+          className="bg-[#3B1F0E] text-white hover:bg-[#6B3A22] rounded-lg px-4 py-2.5 text-sm">
           + Add promo
         </Button>
       </div>
 
       {/* Form */}
       {showForm && (
-        <div className="bg-white rounded-xl border border-[#FFE8D6] p-6 mb-8 max-w-2xl">
+        <div className="bg-white rounded-xl border border-[#FFE8D6] p-4 md:p-6 mb-6 max-w-2xl">
           <h2 className="text-sm font-medium text-[#3B1F0E] mb-4">
             {editing ? `Edit — ${editing.code}` : 'New promo code'}
           </h2>
           <form onSubmit={handleSave} className="space-y-4">
-            <Input
-              label="Promo code"
-              value={code}
-              onChange={e => setCode(e.target.value.toUpperCase())}
-              placeholder="SUMMER20"
-            />
-
-            {/* Type selector */}
+            <Input label="Promo code" value={code}
+              onChange={e => setCode(e.target.value.toUpperCase())} placeholder="SUMMER20" />
             <div>
               <p className="text-sm text-[#3B1F0E] mb-1.5">Discount type</p>
               <div className="flex gap-3">
                 {(['percent', 'fixed'] as const).map(t => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setType(t)}
-                    className={`px-4 py-2 rounded-lg border text-sm transition-colors ${
-                      type === t
-                        ? 'bg-[#3B1F0E] text-white border-[#3B1F0E]'
-                        : 'border-[#FFE8D6] text-[#6B3A22] hover:border-[#FFCBA4]'
-                    }`}
-                  >
-                    {t === 'percent' ? 'Percentage (%)' : 'Fixed amount (₱)'}
+                  <button key={t} type="button" onClick={() => setType(t)}
+                    className={`flex-1 px-4 py-2 rounded-lg border text-sm transition-colors ${
+                      type === t ? 'bg-[#3B1F0E] text-white border-[#3B1F0E]' : 'border-[#FFE8D6] text-[#6B3A22] hover:border-[#FFCBA4]'
+                    }`}>
+                    {t === 'percent' ? 'Percentage (%)' : 'Fixed (₱)'}
                   </button>
                 ))}
               </div>
             </div>
-
-            <Input
-              label={type === 'percent' ? 'Discount %' : 'Discount amount (₱)'}
-              type="number"
-              value={value}
-              onChange={e => setValue(e.target.value)}
-              placeholder={type === 'percent' ? '20' : '150'}
-            />
-
-            {/* Apply to specific product */}
+            <Input label={type === 'percent' ? 'Discount %' : 'Discount amount (₱)'}
+              type="number" value={value} onChange={e => setValue(e.target.value)}
+              placeholder={type === 'percent' ? '20' : '150'} />
             <div>
               <p className="text-sm text-[#3B1F0E] mb-1.5">Apply to (optional)</p>
-              <select
-                value={productId}
-                onChange={e => setProductId(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg border border-[#FFE8D6] bg-white text-sm text-[#3B1F0E] focus:outline-none focus:ring-2 focus:ring-[#FFCBA4]"
-              >
+              <select value={productId} onChange={e => setProductId(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg border border-[#FFE8D6] bg-white text-sm text-[#3B1F0E] focus:outline-none focus:ring-2 focus:ring-[#FFCBA4]">
                 <option value="">All products (site-wide)</option>
-                {products.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
+                {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Starts at (optional)"
-                type="datetime-local"
-                value={startsAt}
-                onChange={e => setStartsAt(e.target.value)}
-              />
-              <Input
-                label="Ends at (optional)"
-                type="datetime-local"
-                value={endsAt}
-                onChange={e => setEndsAt(e.target.value)}
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input label="Starts at (optional)" type="datetime-local" value={startsAt} onChange={e => setStartsAt(e.target.value)} />
+              <Input label="Ends at (optional)" type="datetime-local" value={endsAt} onChange={e => setEndsAt(e.target.value)} />
             </div>
-
             <Toggle checked={isActive} onChange={setIsActive} label="Active" />
-
             <div className="flex gap-3 pt-2">
               <Button type="submit" disabled={saving}
                 className="bg-[#3B1F0E] text-white hover:bg-[#6B3A22] px-6 py-2.5 rounded-lg">
@@ -193,8 +144,57 @@ export default function AdminPromosPage() {
         </div>
       )}
 
-      {/* Promos table */}
-      <div className="bg-white rounded-xl border border-[#FFE8D6] overflow-hidden">
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {promos.map(promo => (
+          <div key={promo.id} className="bg-white rounded-xl border border-[#FFE8D6] p-4 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <span className="font-mono font-medium text-[#3B1F0E] bg-[#F2EDE8] px-2 py-1 rounded text-sm">
+                {promo.code}
+              </span>
+              <Badge variant={promo.is_active ? 'success' : 'danger'}>
+                {promo.is_active ? 'Active' : 'Inactive'}
+              </Badge>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <p className="text-[#6B3A22]">Discount</p>
+                <p className="text-[#3B1F0E] font-medium mt-0.5">
+                  {promo.type === 'percent' ? `${promo.value}%` : `₱${promo.value}`}
+                </p>
+              </div>
+              <div>
+                <p className="text-[#6B3A22]">Applies to</p>
+                <p className="text-[#3B1F0E] font-medium mt-0.5 truncate">
+                  {promo.product?.name ?? 'All products'}
+                </p>
+              </div>
+              <div>
+                <p className="text-[#6B3A22]">Expires</p>
+                <p className="text-[#3B1F0E] font-medium mt-0.5">
+                  {promo.ends_at ? formatDate(promo.ends_at) : 'No expiry'}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-1 border-t border-[#FFE8D6]">
+              <button onClick={() => openEdit(promo)}
+                className="text-xs text-[#6B3A22] hover:text-[#3B1F0E] underline">Edit</button>
+              <button onClick={() => toggleActive(promo.id, promo.is_active)}
+                className={`text-xs underline ${promo.is_active ? 'text-red-400 hover:text-red-600' : 'text-green-600 hover:text-green-800'}`}>
+                {promo.is_active ? 'Deactivate' : 'Activate'}
+              </button>
+              <button onClick={() => handleDelete(promo.id)}
+                className="text-xs text-red-400 hover:text-red-600 underline">Delete</button>
+            </div>
+          </div>
+        ))}
+        {promos.length === 0 && (
+          <div className="py-16 text-center text-sm text-[#6B3A22]">No promos yet.</div>
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block bg-white rounded-xl border border-[#FFE8D6] overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-[#FAF7F4] border-b border-[#FFE8D6]">
             <tr>
@@ -211,18 +211,12 @@ export default function AdminPromosPage() {
                     {promo.code}
                   </span>
                 </td>
-                <td className="px-5 py-4 text-[#6B3A22]">
-                  {promo.type === 'percent' ? 'Percentage' : 'Fixed'}
-                </td>
+                <td className="px-5 py-4 text-[#6B3A22]">{promo.type === 'percent' ? 'Percentage' : 'Fixed'}</td>
                 <td className="px-5 py-4 text-[#3B1F0E] font-medium">
                   {promo.type === 'percent' ? `${promo.value}%` : `₱${promo.value}`}
                 </td>
-                <td className="px-5 py-4 text-[#6B3A22]">
-                  {promo.product?.name ?? 'All products'}
-                </td>
-                <td className="px-5 py-4 text-[#6B3A22]">
-                  {promo.ends_at ? formatDate(promo.ends_at) : 'No expiry'}
-                </td>
+                <td className="px-5 py-4 text-[#6B3A22]">{promo.product?.name ?? 'All products'}</td>
+                <td className="px-5 py-4 text-[#6B3A22]">{promo.ends_at ? formatDate(promo.ends_at) : 'No expiry'}</td>
                 <td className="px-5 py-4">
                   <Badge variant={promo.is_active ? 'success' : 'danger'}>
                     {promo.is_active ? 'Active' : 'Inactive'}
@@ -231,17 +225,13 @@ export default function AdminPromosPage() {
                 <td className="px-5 py-4">
                   <div className="flex gap-3">
                     <button onClick={() => openEdit(promo)}
-                      className="text-xs text-[#6B3A22] hover:text-[#3B1F0E] underline">
-                      Edit
-                    </button>
+                      className="text-xs text-[#6B3A22] hover:text-[#3B1F0E] underline">Edit</button>
                     <button onClick={() => toggleActive(promo.id, promo.is_active)}
                       className={`text-xs underline ${promo.is_active ? 'text-red-400 hover:text-red-600' : 'text-green-600 hover:text-green-800'}`}>
                       {promo.is_active ? 'Deactivate' : 'Activate'}
                     </button>
                     <button onClick={() => handleDelete(promo.id)}
-                      className="text-xs text-red-400 hover:text-red-600 underline">
-                      Delete
-                    </button>
+                      className="text-xs text-red-400 hover:text-red-600 underline">Delete</button>
                   </div>
                 </td>
               </tr>
@@ -249,9 +239,7 @@ export default function AdminPromosPage() {
           </tbody>
         </table>
         {promos.length === 0 && (
-          <div className="py-16 text-center text-sm text-[#6B3A22]">
-            No promos yet. Create your first discount code.
-          </div>
+          <div className="py-16 text-center text-sm text-[#6B3A22]">No promos yet.</div>
         )}
       </div>
     </div>

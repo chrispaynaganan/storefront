@@ -64,20 +64,20 @@ export default function AdminCollectionsPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-light text-[#3B1F0E]">Collections</h1>
           <p className="text-sm text-[#6B3A22] mt-1">{collections.length} total</p>
         </div>
         <Button onClick={openNew}
-          className="bg-[#3B1F0E] text-white hover:bg-[#6B3A22] rounded-lg px-5 py-2.5 text-sm">
+          className="bg-[#3B1F0E] text-white hover:bg-[#6B3A22] rounded-lg px-4 py-2.5 text-sm">
           + Add collection
         </Button>
       </div>
 
       {/* Form */}
       {showForm && (
-        <div className="bg-white rounded-xl border border-[#FFE8D6] p-6 mb-8 max-w-2xl">
+        <div className="bg-white rounded-xl border border-[#FFE8D6] p-4 md:p-6 mb-6 max-w-2xl">
           <h2 className="text-sm font-medium text-[#3B1F0E] mb-4">
             {editing ? `Edit — ${editing.name}` : 'New collection'}
           </h2>
@@ -105,8 +105,41 @@ export default function AdminCollectionsPage() {
         </div>
       )}
 
-      {/* List */}
-      <div className="bg-white rounded-xl border border-[#FFE8D6] overflow-hidden">
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {collections.map(col => (
+          <div key={col.id} className="bg-white rounded-xl border border-[#FFE8D6] p-4 flex gap-3">
+            <div className="w-14 h-14 rounded-lg bg-[#F2EDE8] overflow-hidden flex-shrink-0">
+              {col.image_url && (
+                <img src={col.image_url} alt={col.name} className="w-full h-full object-cover" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-medium text-[#3B1F0E] text-sm">{col.name}</p>
+                  <p className="text-xs text-[#6B3A22] mt-0.5">{col.slug}</p>
+                </div>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${col.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {col.is_active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+              <div className="flex gap-3 mt-2">
+                <button onClick={() => openEdit(col)}
+                  className="text-xs text-[#6B3A22] hover:text-[#3B1F0E] underline">Edit</button>
+                <button onClick={() => handleDelete(col.id)}
+                  className="text-xs text-red-400 hover:text-red-600 underline">Delete</button>
+              </div>
+            </div>
+          </div>
+        ))}
+        {collections.length === 0 && (
+          <div className="py-16 text-center text-sm text-[#6B3A22]">No collections yet.</div>
+        )}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block bg-white rounded-xl border border-[#FFE8D6] overflow-hidden">
         <table className="w-full text-sm">
           <thead className="bg-[#FAF7F4] border-b border-[#FFE8D6]">
             <tr>

@@ -6,9 +6,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const user = await getUser()
   if (!user || user.role !== 'admin') redirect('/login')
   return (
-    <div className="flex min-h-screen bg-whitewash-off">
+    <div className="flex min-h-screen w-full bg-[#FAF7F4]">
       <AdminSidebar />
-      <main className="flex-1 p-8">{children}</main>
+      <main className="flex-1 min-w-0 p-4 md:p-8 pb-28 md:pb-8">{children}</main>
     </div>
   )
 }
