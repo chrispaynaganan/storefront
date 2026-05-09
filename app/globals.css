@@ -8,4 +8,6 @@
   --color-brown-light: #6B3A22;
   --color-whitewash: #FAF7F4;
   --color-whitewash-off: #F2EDE8;
+
+  --font-sans: var(--font-quicksand);
 }

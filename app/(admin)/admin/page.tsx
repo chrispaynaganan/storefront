@@ -82,13 +82,13 @@ export default async function AdminDashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-light text-[#3B1F0E]">Dashboard</h1>
-          <p className="text-sm text-[#6B3A22] mt-0.5">Welcome back — here's what's happening.</p>
+          <h1 className="text-2xl font-light text-brown">Dashboard</h1>
+          <p className="text-sm text-brown-light mt-0.5">Welcome back — here's what's happening.</p>
         </div>
         {(pendingCount ?? 0) > 0 && (
           <Link href="/admin/orders"
-            className="flex items-center gap-2 bg-[#FFCBA4] text-[#3B1F0E] text-xs font-medium px-3 py-2 rounded-full hover:bg-[#ffb980] transition-colors">
-            <span className="w-2 h-2 bg-[#3B1F0E] rounded-full animate-pulse" />
+            className="flex items-center gap-2 bg-peach text-brown text-xs font-medium px-3 py-2 rounded-full hover:bg-[#ffb980] transition-colors">
+            <span className="w-2 h-2 bg-brown rounded-full animate-pulse" />
             {pendingCount} pending {pendingCount === 1 ? 'order' : 'orders'}
           </Link>
         )}
@@ -97,50 +97,50 @@ export default async function AdminDashboardPage() {
       {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {stats.map(stat => (
-          <div key={stat.label} className="bg-white rounded-xl border border-[#FFE8D6] p-4 md:p-5">
+          <div key={stat.label} className="bg-white rounded-xl border border-peach-light p-4 md:p-5">
             <div className="flex items-start justify-between mb-3">
-              <p className="text-xs text-[#6B3A22] uppercase tracking-wide leading-tight">{stat.label}</p>
+              <p className="text-xs text-brown-light uppercase tracking-wide leading-tight">{stat.label}</p>
               <div className={`${stat.bg} ${stat.color} p-1.5 rounded-lg`}>
                 {stat.icon}
               </div>
             </div>
-            <p className="text-2xl font-light text-[#3B1F0E]">{stat.value}</p>
+            <p className="text-2xl font-light text-brown">{stat.value}</p>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Recent orders */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-[#FFE8D6] overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-[#FFE8D6]">
-            <h2 className="text-sm font-medium text-[#3B1F0E]">Recent orders</h2>
-            <Link href="/admin/orders" className="text-xs text-[#6B3A22] hover:text-[#3B1F0E] underline">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-peach-light overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-peach-light">
+            <h2 className="text-sm font-medium text-brown">Recent orders</h2>
+            <Link href="/admin/orders" className="text-xs text-brown-light hover:text-brown underline">
               View all
             </Link>
           </div>
           {(!orders || orders.length === 0) ? (
-            <div className="py-12 text-center text-sm text-[#6B3A22]">No orders yet.</div>
+            <div className="py-12 text-center text-sm text-brown-light">No orders yet.</div>
           ) : (
-            <div className="divide-y divide-[#FFE8D6]">
+            <div className="divide-y divide-peach-light">
               {orders.map((order: any) => (
                 <Link key={order.id} href={`/admin/orders/${order.id}`}
-                  className="flex items-center justify-between px-5 py-3.5 hover:bg-[#FAF7F4] transition-colors">
+                  className="flex items-center justify-between px-5 py-3.5 hover:bg-whitewash transition-colors">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#F2EDE8] flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-medium text-[#3B1F0E]">
+                    <div className="w-8 h-8 rounded-full bg-whitewash-off flex items-center justify-center shrink-0">
+                      <span className="text-xs font-medium text-brown">
                         {(order.user?.full_name || order.user?.email || '?')[0].toUpperCase()}
                       </span>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-[#3B1F0E]">
+                      <p className="text-sm font-medium text-brown">
                         {order.user?.full_name || order.user?.email || 'Guest'}
                       </p>
-                      <p className="text-xs text-[#6B3A22]">#{order.id.slice(0, 8).toUpperCase()}</p>
+                      <p className="text-xs text-brown-light">#{order.id.slice(0, 8).toUpperCase()}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <Badge variant={statusVariant[order.status]}>{order.status}</Badge>
-                    <span className="text-sm font-medium text-[#3B1F0E]">
+                    <span className="text-sm font-medium text-brown">
                       {formatPrice(order.total, order.currency)}
                     </span>
                   </div>
@@ -153,8 +153,8 @@ export default async function AdminDashboardPage() {
         {/* Right column */}
         <div className="space-y-4">
           {/* Quick actions */}
-          <div className="bg-white rounded-xl border border-[#FFE8D6] p-5">
-            <h2 className="text-sm font-medium text-[#3B1F0E] mb-3">Quick actions</h2>
+          <div className="bg-white rounded-xl border border-peach-light p-5">
+            <h2 className="text-sm font-medium text-brown mb-3">Quick actions</h2>
             <div className="space-y-2">
               {[
                 { href: '/admin/products/new', label: 'Add new product', icon: '＋' },
@@ -163,11 +163,11 @@ export default async function AdminDashboardPage() {
                 { href: '/admin/orders', label: 'View all orders', icon: '→' },
               ].map(action => (
                 <Link key={action.href} href={action.href}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#FAF7F4] transition-colors group">
-                  <span className="w-7 h-7 rounded-md bg-[#F2EDE8] flex items-center justify-center text-sm text-[#3B1F0E] flex-shrink-0 group-hover:bg-[#FFCBA4] transition-colors">
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-whitewash transition-colors group">
+                  <span className="w-7 h-7 rounded-md bg-whitewash-off flex items-center justify-center text-sm text-brown shrink-0 group-hover:bg-peach transition-colors">
                     {action.icon}
                   </span>
-                  <span className="text-sm text-[#6B3A22] group-hover:text-[#3B1F0E] transition-colors">
+                  <span className="text-sm text-brown-light group-hover:text-brown transition-colors">
                     {action.label}
                   </span>
                 </Link>
@@ -177,19 +177,19 @@ export default async function AdminDashboardPage() {
 
           {/* Low stock alert */}
           {lowStock && lowStock.length > 0 && (
-            <div className="bg-white rounded-xl border border-[#FFE8D6] p-5">
+            <div className="bg-white rounded-xl border border-peach-light p-5">
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-2 h-2 bg-amber-400 rounded-full" />
-                <h2 className="text-sm font-medium text-[#3B1F0E]">Low stock</h2>
+                <h2 className="text-sm font-medium text-brown">Low stock</h2>
               </div>
               <div className="space-y-2">
                 {lowStock.map((v: any, i: number) => (
                   <div key={i} className="flex items-center justify-between">
                     <div>
-                      <p className="text-xs font-medium text-[#3B1F0E] truncate max-w-[140px]">
+                      <p className="text-xs font-medium text-brown truncate max-w-35">
                         {v.product?.name}
                       </p>
-                      <p className="text-xs text-[#6B3A22]">Size {v.size}</p>
+                      <p className="text-xs text-brown-light">Size {v.size}</p>
                     </div>
                     <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
                       {v.stock_qty} left
@@ -198,7 +198,7 @@ export default async function AdminDashboardPage() {
                 ))}
               </div>
               <Link href="/admin/products"
-                className="block text-xs text-[#6B3A22] hover:text-[#3B1F0E] underline mt-3">
+                className="block text-xs text-brown-light hover:text-brown underline mt-3">
                 Manage inventory →
               </Link>
             </div>

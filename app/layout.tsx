@@ -1,18 +1,18 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Quicksand } from 'next/font/google'
 import './globals.css'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const quicksand = Quicksand({ subsets: ['latin'], variable: '--font-quicksand' })
 
 export const metadata: Metadata = {
-  title: { default: 'Your Brand', template: '%s | Your Brand' },
+  title: { default: 'Known&Worn', template: '%s | Known&Worn' },
   description: 'Premium hoodies and shirts',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={inter.variable}>
+      <body className={`${quicksand.variable} font-sans`}>
         {children}
       </body>
     </html>
