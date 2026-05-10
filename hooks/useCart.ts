@@ -1,6 +1,2 @@
 'use client'
-import { useCartContext } from '@/context/CartContext'
-
-export function useCart() {
-  return useCartContext()
-}
+export { useCart } from '@/context/CartContext'
