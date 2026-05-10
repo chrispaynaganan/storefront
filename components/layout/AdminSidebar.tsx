@@ -1,90 +1,207 @@
 'use client'
+
+// components/layout/AdminSidebar.tsx
+
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
-const links = [
-  { href: '/admin', label: 'Dashboard', icon: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
-    </svg>
-  )},
-  { href: '/admin/products', label: 'Products', icon: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
-    </svg>
-  )},
-  { href: '/admin/collections', label: 'Collections', icon: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
-    </svg>
-  )},
-  { href: '/admin/orders', label: 'Orders', icon: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
-    </svg>
-  )},
-  { href: '/admin/promos', label: 'Promos', icon: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 14.25l6-6m4.5-3.493V21.75l-3.75-1.5-3.75 1.5-3.75-1.5-3.75 1.5V4.757c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0111.186 0c1.1.128 1.907 1.077 1.907 2.185z" />
-    </svg>
-  )},
-  { href: '/admin/users', label: 'Customers', icon: (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-    </svg>
-  )},
+// ─── Nav items ────────────────────────────────────────────────────────────────
+
+const NAV = [
+  {
+    label: 'Dashboard',
+    href: '/admin',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Products',
+    href: '/admin/products',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Collections',
+    href: '/admin/collections',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Orders',
+    href: '/admin/orders',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Promos',
+    href: '/admin/promos',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      </svg>
+    ),
+  },
+  {
+    label: 'Customers',
+    href: '/admin/users',
+    icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    ),
+  },
 ]
 
-export function AdminSidebar() {
+function useIsActive() {
   const pathname = usePathname()
+  return (href: string) =>
+    href === '/admin' ? pathname === '/admin' : pathname.startsWith(href)
+}
+
+// ─── Desktop sidebar (lg+) ────────────────────────────────────────────────────
+
+function AdminSidebar({
+  userEmail,
+  avatarUrl,
+}: {
+  userEmail?: string | null
+  avatarUrl?: string | null
+}) {
+  const isActive = useIsActive()
+  const router = useRouter()
+
+  async function handleSignOut() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
 
   return (
-    <>
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-56 min-h-screen bg-brown text-white flex-shrink-0 flex-col">
-        <div className="p-6 border-b border-brown-light">
-          <p className="text-sm font-medium text-peach">Known&Worn</p>
-          <p className="text-xs text-peach/60 mt-0.5">Admin</p>
-        </div>
-        <nav className="p-4 space-y-1 flex-1">
-          {links.map(link => (
+    <aside
+      className="hidden lg:flex flex-col w-70 shrink-0 fixed top-0 left-0 bg-peach-light/60 rounded-3xl m-4 p-5"
+      style={{ height: 'calc(100vh - 2rem)' }}
+    >
+      {/* Brand */}
+      <div className="mb-8 px-1">
+        <p className="text-sm font-extrabold tracking-widest text-brown uppercase leading-none">
+          Known&amp;Worn
+        </p>
+        <p className="text-xs text-brown/40 mt-1">Admin</p>
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 flex flex-col gap-1">
+        {NAV.map((item) => {
+          const active = isActive(item.href)
+          return (
             <Link
-              key={link.href}
-              href={link.href}
+              key={item.href}
+              href={item.href}
               className={cn(
-                'flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-colors',
-                pathname === link.href
-                  ? 'bg-peach text-brown font-medium'
-                  : 'text-peach-light hover:bg-brown-light'
+                'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors',
+                active ? 'bg-peach/50 text-brown' : 'text-brown/50 hover:bg-peach/20 hover:text-brown',
               )}
             >
-              {link.icon}
-              {link.label}
+              <span className={cn('shrink-0', active ? 'text-brown' : 'text-brown/40')}>
+                {item.icon}
+              </span>
+              {item.label}
             </Link>
-          ))}
-        </nav>
-      </aside>
-
-      {/* Mobile bottom tab bar */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-brown border-t border-brown-light flex">
-        {links.map(link => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={cn(
-              'flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-[10px] transition-colors',
-              pathname === link.href
-                ? 'text-peach font-medium'
-                : 'text-peach/50'
-            )}
-          >
-            {link.icon}
-            {link.label}
-          </Link>
-        ))}
+          )
+        })}
       </nav>
+
+      {/* Sign out */}
+      <button
+        onClick={handleSignOut}
+        className="flex items-center gap-3 px-2 py-2 mt-4 rounded-xl hover:bg-peach/20 transition-colors group w-full text-left"
+      >
+        {avatarUrl ? (
+          <img src={avatarUrl} alt="avatar" className="w-8 h-8 rounded-full object-cover shrink-0" />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-peach flex items-center justify-center text-brown text-xs font-bold shrink-0">
+            {userEmail?.[0]?.toUpperCase() ?? 'A'}
+          </div>
+        )}
+        <span className="text-sm font-semibold text-brown/50 group-hover:text-brown transition-colors">
+          Sign Out
+        </span>
+      </button>
+    </aside>
+  )
+}
+
+// ─── Mobile + tablet bottom tab bar (below lg) ───────────────────────────────
+
+function AdminTabBar() {
+  const isActive = useIsActive()
+
+  return (
+    <nav className="lg:hidden fixed bottom-4 left-4 right-4 z-50">
+      <div className="bg-whitewash/95 backdrop-blur-md border border-whitewash-off rounded-3xl shadow-lg px-2 py-2">
+        <div className="flex items-center justify-around">
+          {NAV.map((item) => {
+            const active = isActive(item.href)
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex flex-col items-center gap-1 py-1 px-1 flex-1 min-w-0"
+              >
+                <span
+                  className={cn(
+                    'flex items-center justify-center w-9 h-9 rounded-xl transition-colors',
+                    active ? 'bg-peach/50 text-brown' : 'text-brown/35',
+                  )}
+                >
+                  {item.icon}
+                </span>
+                <span
+                  className={cn(
+                    'text-[10px] font-semibold truncate w-full text-center leading-none',
+                    active ? 'text-brown' : 'text-brown/35',
+                  )}
+                >
+                  {item.label}
+                </span>
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+    </nav>
+  )
+}
+
+// ─── Default export ───────────────────────────────────────────────────────────
+
+export default function AdminNav({
+  userEmail,
+  avatarUrl,
+}: {
+  userEmail?: string | null
+  avatarUrl?: string | null
+}) {
+  return (
+    <>
+      <AdminSidebar userEmail={userEmail} avatarUrl={avatarUrl} />
+      <AdminTabBar />
     </>
   )
 }
