@@ -3,8 +3,7 @@
 // components/layout/AdminSidebar.tsx
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
+import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 
 // ─── Nav items ────────────────────────────────────────────────────────────────
@@ -83,14 +82,6 @@ function AdminSidebar({
   avatarUrl?: string | null
 }) {
   const isActive = useIsActive()
-  const router = useRouter()
-
-  async function handleSignOut() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
-  }
 
   return (
     <aside
@@ -128,9 +119,9 @@ function AdminSidebar({
       </nav>
 
       {/* Sign out */}
-      <button
-        onClick={handleSignOut}
-        className="flex items-center gap-3 px-2 py-2 mt-4 rounded-xl hover:bg-peach/20 transition-colors group w-full text-left"
+      <Link
+        href="/admin/signout"
+        className="flex items-center gap-3 px-2 py-2 mt-4 rounded-xl hover:bg-peach/20 transition-colors group w-full"
       >
         {avatarUrl ? (
           <img src={avatarUrl} alt="avatar" className="w-8 h-8 rounded-full object-cover shrink-0" />
@@ -142,7 +133,7 @@ function AdminSidebar({
         <span className="text-sm font-semibold text-brown/50 group-hover:text-brown transition-colors">
           Sign Out
         </span>
-      </button>
+      </Link>
     </aside>
   )
 }
