@@ -19,9 +19,9 @@ const NAV_LINKS = [
   { label: 'Sale',    href: '/collections/sale', sale: true },
 ]
 
-interface Props {
-  user: User | null
-  cartCount: number
+type Props = {
+  user: any
+  cartCount?: number;
 }
 
 export function Navbar({ user, cartCount }: Props) {
