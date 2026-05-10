@@ -22,12 +22,12 @@ export function CartPageClient({ cartItems }: { cartItems: any[] }) {
   if (!cartItems.length) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-10">
-        <h1 className="text-3xl font-light text-[#3B1F0E] mb-8">Your cart</h1>
+        <h1 className="text-3xl font-light text-brown mb-8">Your cart</h1>
         <EmptyState
           message="Your cart is empty."
           action={
             <Link href="/products">
-              <Button className="bg-[#3B1F0E] text-white hover:bg-[#6B3A22] px-6 py-2.5 rounded-lg mt-4">
+              <Button className="bg-brown text-whitewash hover:bg-brown-light px-6 py-2.5 rounded-lg mt-4">
                 Shop now
               </Button>
             </Link>
@@ -39,7 +39,7 @@ export function CartPageClient({ cartItems }: { cartItems: any[] }) {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
-      <h1 className="text-3xl font-light text-[#3B1F0E] mb-8">
+      <h1 className="text-3xl font-light text-brown mb-8">
         Your cart ({cartItems.length})
       </h1>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">

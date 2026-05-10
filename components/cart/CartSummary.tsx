@@ -20,7 +20,9 @@ export function CartSummary({ subtotal, discount }: Props) {
       <div className="flex justify-between text-sm font-medium text-brown border-t border-peach-light pt-3">
         <span>Total</span><span>{formatPrice(total)}</span>
       </div>
-      <Link href="/checkout"><Button className="w-full" size="lg">Checkout</Button></Link>
+      <Link href="/checkout">
+        <Button className="w-full" size="lg">Checkout</Button>
+      </Link>
     </div>
   )
 }

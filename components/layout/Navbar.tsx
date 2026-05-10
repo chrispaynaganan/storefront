@@ -6,7 +6,7 @@ import { FavoritesIcon } from '@/components/layout/FavoritesIcon'
 import { MobileMenu } from '@/components/layout/MobileMenu'
 import { ProfileDropdown } from '@/components/layout/ProfileDropdown'
 import { SearchBar } from '@/components/layout/SearchBar'
-import type { User } from '@/types'
+import { useCart } from '@/context/CartContext'
 
 const NAV_LINKS = [
   { label: 'Women',   href: '/' },
@@ -21,10 +21,11 @@ const NAV_LINKS = [
 
 type Props = {
   user: any
-  cartCount?: number;
 }
 
-export function Navbar({ user, cartCount }: Props) {
+export function Navbar({ user }: Props) {
+  const { cartCount } = useCart()
+
   return (
     <header className="sticky top-0 z-50 bg-whitewash/95 backdrop-blur-sm border-b border-peach-light">
       {/* Top row */}

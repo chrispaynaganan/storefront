@@ -1,38 +1,35 @@
 'use client'
-import { createContext, useContext, useState, useEffect } from 'react'
-import type { CartItem } from '@/types'
+import { createContext, useContext, useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase'
 
-interface CartContextValue {
-  items: CartItem[]
-  count: number
-  isOpen: boolean
-  setItems: (items: CartItem[]) => void
-  openCart: () => void
-  closeCart: () => void
-  refresh: () => void
+type CartContextType = {
+  cartCount: number
+  refreshCart: () => Promise<void>
 }
 
-const CartContext = createContext<CartContextValue | null>(null)
+const CartContext = createContext<CartContextType>({ cartCount: 0, refreshCart: async () => {} })
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([])
-  const [isOpen, setIsOpen] = useState(false)
+export function CartProvider({ children, initialCount = 0 }: { children: React.ReactNode, initialCount?: number }) {
+  const [cartCount, setCartCount] = useState(initialCount)
 
-  const count = items.reduce((sum, item) => sum + item.qty, 0)
+  async function refreshCart() {
+    const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setCartCount(0); return }
+    const { count } = await supabase
+      .from('cart_items')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+    setCartCount(count ?? 0)
+  }
 
-  function openCart() { setIsOpen(true) }
-  function closeCart() { setIsOpen(false) }
-  function refresh() { /* will fetch cart from API */ }
+  useEffect(() => { refreshCart() }, [])
 
   return (
-    <CartContext.Provider value={{ items, count, isOpen, setItems, openCart, closeCart, refresh }}>
+    <CartContext.Provider value={{ cartCount, refreshCart }}>
       {children}
     </CartContext.Provider>
   )
 }
 
-export function useCartContext() {
-  const ctx = useContext(CartContext)
-  if (!ctx) throw new Error('useCartContext must be used within CartProvider')
-  return ctx
-}
+export const useCart = () => useContext(CartContext)

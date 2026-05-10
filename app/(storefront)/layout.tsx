@@ -20,9 +20,9 @@ export default async function StorefrontLayout({ children }: { children: React.R
 
   return (
     <ToastProvider>
-      <CartProvider>
+      <CartProvider initialCount={cartCount}>
         <div className="flex flex-col min-h-screen">
-          <Navbar user={user} cartCount={cartCount} />
+          <Navbar user={user} />
           <main className="flex-1">{children}</main>
           <Footer />
         </div>
