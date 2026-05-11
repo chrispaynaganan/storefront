@@ -30,7 +30,6 @@ export function FavoriteButton({
       return
     }
 
-    // Optimistic update
     setFavorited(prev => !prev)
 
     startTransition(async () => {
@@ -51,23 +50,15 @@ export function FavoriteButton({
   return (
     <button
       onClick={(e) => {
-        e.preventDefault() // prevents triggering parent <Link>
+        e.preventDefault()
         e.stopPropagation()
         toggle()
       }}
       disabled={isPending}
       aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
-      className={`
-        rounded-full transition-all duration-200
-        ${buttonSize}
-        ${favorited
-          ? 'text-brown'
-          : 'text-brown/40 <hover:text-brown></hover:text-brown>/80'
-        }
-        hover:bg-peach/30
-        disabled:opacity-50
-        ${className}
-      `}
+      className={`rounded-full transition-all duration-200 ${buttonSize} ${
+        favorited ? 'text-brown' : 'text-brown/40 hover:text-brown/80'
+      } hover:bg-peach/30 disabled:opacity-50 ${className}`}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
