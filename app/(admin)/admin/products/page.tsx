@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import { slugify, formatPrice } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
 
 interface Collection { id: string; name: string }
 
@@ -90,16 +92,6 @@ function SelectInput(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   )
 }
 
-function TextareaInput(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return (
-    <textarea
-      {...props}
-      rows={3}
-      className="w-full bg-gray-100 rounded-2xl px-4 py-3 text-sm text-brown placeholder:text-brown/30 outline-none focus:ring-2 focus:ring-peach transition resize-none"
-    />
-  )
-}
-
 function ColorPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   return (
     <div className="flex items-center gap-2 flex-wrap mt-2">
@@ -122,6 +114,150 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (v: string)
         title="Custom color"
         className="w-7 h-7 rounded-full cursor-pointer border border-peach-light"
       />
+    </div>
+  )
+}
+
+function RichTextEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const editor = useEditor({
+  immediatelyRender: false,  // add this line
+  extensions: [StarterKit],
+  content: value,
+  onUpdate: ({ editor }) => onChange(editor.getHTML()),
+  editorProps: {
+    attributes: {
+      class: 'prose prose-sm max-w-none min-h-[100px] px-4 py-3 text-sm text-brown outline-none',
+    },
+  },
+})
+
+  if (!editor) return null
+
+  const ToolbarBtn = ({ onClick, active, children }: { onClick: () => void; active?: boolean; children: React.ReactNode }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-2 py-1 rounded text-sm font-medium transition-colors ${
+        active ? 'bg-brown text-whitewash' : 'text-brown/60 hover:text-brown hover:bg-gray-100'
+      }`}
+    >
+      {children}
+    </button>
+  )
+
+  return (
+    <div className="bg-gray-100 rounded-2xl overflow-hidden border border-transparent focus-within:ring-2 focus-within:ring-peach transition">
+      <div className="flex items-center gap-1 px-3 py-2 border-b border-gray-200 flex-wrap">
+        <ToolbarBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')}>
+          <strong>B</strong>
+        </ToolbarBtn>
+        <ToolbarBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')}>
+          <em>I</em>
+        </ToolbarBtn>
+        <ToolbarBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive('bulletList')}>
+          • List
+        </ToolbarBtn>
+        <ToolbarBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive('orderedList')}>
+          1. List
+        </ToolbarBtn>
+        <ToolbarBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive('heading', { level: 2 })}>
+          H2
+        </ToolbarBtn>
+        <ToolbarBtn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive('heading', { level: 3 })}>
+          H3
+        </ToolbarBtn>
+        <ToolbarBtn onClick={() => editor.chain().focus().setHorizontalRule().run()}>
+          —
+        </ToolbarBtn>
+        <ToolbarBtn onClick={() => editor.chain().focus().undo().run()}>
+          ↩
+        </ToolbarBtn>
+        <ToolbarBtn onClick={() => editor.chain().focus().redo().run()}>
+          ↪
+        </ToolbarBtn>
+      </div>
+      <EditorContent editor={editor} />
+    </div>
+  )
+}
+
+function EditVariantModal({
+  variant,
+  productSlug,
+  onSave,
+  onClose,
+}: {
+  variant: Variant
+  productSlug: string
+  onSave: (v: Variant) => void
+  onClose: () => void
+}) {
+  const [size, setSize] = useState(variant.size)
+  const [color, setColor] = useState(variant.color ?? '')
+  const [price, setPrice] = useState(String(variant.price))
+  const [compareAt, setCompareAt] = useState(variant.compare_at_price ? String(variant.compare_at_price) : '')
+  const [stock, setStock] = useState(String(variant.stock_qty))
+
+  function handleSave() {
+    onSave({
+      ...variant,
+      size,
+      color,
+      price: parseFloat(price),
+      compare_at_price: compareAt ? parseFloat(compareAt) : null,
+      stock_qty: parseInt(stock),
+    })
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-70 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-5 max-h-[90dvh] overflow-y-auto">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-bold text-brown">Edit Variant</h3>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition">
+            <svg className="w-5 h-5 text-brown/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <Field label="Size">
+          <SelectInput value={size} onChange={e => setSize(e.target.value)}>
+            {SIZES.map(s => <option key={s}>{s}</option>)}
+          </SelectInput>
+        </Field>
+
+        <div className="flex flex-col gap-1.5">
+          <label className="text-sm text-brown/70 font-medium">Color <span className="text-brown/30 font-normal">(optional)</span></label>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full border border-peach-light shrink-0" style={{ backgroundColor: color || '#f0f0f0' }} />
+            <TextInput value={color} onChange={e => setColor(e.target.value)} placeholder="#000000 or leave empty" />
+          </div>
+          <ColorPicker value={color} onChange={setColor} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Price (PHP)">
+            <TextInput type="number" value={price} onChange={e => setPrice(e.target.value)} />
+          </Field>
+          <Field label="Compare at (PHP)">
+            <TextInput type="number" value={compareAt} onChange={e => setCompareAt(e.target.value)} />
+          </Field>
+        </div>
+
+        <Field label="Stock">
+          <TextInput type="number" value={stock} onChange={e => setStock(e.target.value)} />
+        </Field>
+
+        <button
+          onClick={handleSave}
+          className="w-full bg-brown-light text-white font-semibold rounded-2xl py-3.5 hover:bg-brown transition"
+        >
+          Save Changes
+        </button>
+      </div>
     </div>
   )
 }
@@ -176,19 +312,10 @@ function AddSizeModal({
         </Field>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm text-brown/70 font-medium">
-            Color <span className="text-brown/30 font-normal">(optional)</span>
-          </label>
+          <label className="text-sm text-brown/70 font-medium">Color <span className="text-brown/30 font-normal">(optional)</span></label>
           <div className="flex items-center gap-2">
-            <div
-              className="w-7 h-7 rounded-full border border-peach-light shrink-0"
-              style={{ backgroundColor: color || '#f0f0f0' }}
-            />
-            <TextInput
-              value={color}
-              onChange={e => setColor(e.target.value)}
-              placeholder="#000000 or leave empty"
-            />
+            <div className="w-7 h-7 rounded-full border border-peach-light shrink-0" style={{ backgroundColor: color || '#f0f0f0' }} />
+            <TextInput value={color} onChange={e => setColor(e.target.value)} placeholder="#000000 or leave empty" />
           </div>
           <ColorPicker value={color} onChange={setColor} />
         </div>
@@ -207,9 +334,7 @@ function AddSizeModal({
         </Field>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm text-brown/70 font-medium">
-            SKU <span className="text-brown/30 font-normal">(auto-generated)</span>
-          </label>
+          <label className="text-sm text-brown/70 font-medium">SKU <span className="text-brown/30 font-normal">(auto-generated)</span></label>
           <div className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm text-brown/50 font-mono tracking-wide select-all">
             {previewSku}
           </div>
@@ -252,6 +377,7 @@ function ProductModal({
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [variants, setVariants] = useState<Variant[]>(product?.variants ?? [])
   const [showAddSize, setShowAddSize] = useState(false)
+  const [editVariant, setEditVariant] = useState<Variant | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
@@ -268,6 +394,38 @@ function ProductModal({
   useEffect(() => {
     if (mode === 'add') setSlug(slugify(name))
   }, [name, mode])
+
+  function handleSlugInput(value: string) {
+    setSlug(value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''))
+  }
+
+  async function handleSaveVariant(updated: Variant) {
+    if (updated.id) {
+      const { error } = await supabase
+        .from('variants')
+        .update({
+          size: updated.size,
+          color: updated.color || null,
+          price: updated.price,
+          compare_at_price: updated.compare_at_price,
+          stock_qty: updated.stock_qty,
+        })
+        .eq('id', updated.id)
+      if (!error) {
+        setVariants(prev => prev.map(v => v.id === updated.id ? updated : v))
+      }
+    } else {
+      setVariants(prev => prev.map(v => v === editVariant ? updated : v))
+    }
+  }
+
+  async function handleDeleteVariant(variant: Variant) {
+    if (!confirm(`Delete size ${variant.size}?`)) return
+    if (variant.id) {
+      await supabase.from('variants').delete().eq('id', variant.id)
+    }
+    setVariants(prev => prev.filter(v => v !== variant))
+  }
 
   async function handleSave() {
     if (!name || !slug) { setError('Name and slug are required.'); return }
@@ -335,7 +493,7 @@ function ProductModal({
           <div className="overflow-y-auto flex-1 px-6 py-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
 
-              {/* Left: Basic Info */}
+              {/* Left */}
               <div className="flex flex-col gap-5">
                 <h3 className="text-xl font-bold text-brown">Basic Info</h3>
 
@@ -344,7 +502,11 @@ function ProductModal({
                 </Field>
 
                 <Field label="Slug (URL)">
-                  <TextInput placeholder="classic-shirt" value={slug} onChange={e => setSlug(e.target.value)} />
+                  <TextInput
+                    placeholder="classic-shirt"
+                    value={slug}
+                    onChange={e => handleSlugInput(e.target.value)}
+                  />
                 </Field>
 
                 <Field label="Collection">
@@ -353,9 +515,10 @@ function ProductModal({
                   </SelectInput>
                 </Field>
 
-                <Field label="Description">
-                  <TextareaInput placeholder="Nice shirt" value={description} onChange={e => setDescription(e.target.value)} />
-                </Field>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm text-brown/70 font-medium">Description</label>
+                  <RichTextEditor value={description} onChange={setDescription} />
+                </div>
 
                 <div className="flex gap-6">
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -394,7 +557,7 @@ function ProductModal({
                 </div>
               </div>
 
-              {/* Right: Variants */}
+              {/* Right */}
               <div className="flex flex-col gap-5">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xl font-bold text-brown">Variants &amp; Pricing</h3>
@@ -424,10 +587,8 @@ function ProductModal({
                           <th className="px-3 py-2 text-left font-medium">Size</th>
                           <th className="px-3 py-2 text-left font-medium">Color</th>
                           <th className="px-3 py-2 text-left font-medium">Price</th>
-                          <th className="px-3 py-2 text-left font-medium">Compare</th>
                           <th className="px-3 py-2 text-left font-medium">Stock</th>
-                          <th className="px-3 py-2 text-left font-medium">SKU</th>
-                          <th />
+                          <th className="px-3 py-2 text-left font-medium">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -438,25 +599,28 @@ function ProductModal({
                               {v.color ? (
                                 <div className="flex items-center gap-1.5">
                                   <div className="w-5 h-5 rounded-full border border-peach-light shrink-0" style={{ backgroundColor: v.color }} />
-                                  <span className="text-xs text-brown-light font-mono">{v.color}</span>
                                 </div>
                               ) : (
                                 <span className="text-brown/30">—</span>
                               )}
                             </td>
                             <td className="px-3 py-2.5 text-brown">₱{v.price}</td>
-                            <td className="px-3 py-2.5 text-brown">{v.compare_at_price ? `₱${v.compare_at_price}` : '—'}</td>
                             <td className="px-3 py-2.5 text-brown">{v.stock_qty}</td>
-                            <td className="px-3 py-2.5 text-brown font-mono text-xs">{v.sku}</td>
                             <td className="px-3 py-2.5">
-                              {!v.id && (
+                              <div className="flex gap-2">
                                 <button
-                                  onClick={() => setVariants(prev => prev.filter((_, idx) => idx !== i))}
-                                  className="text-brown/30 hover:text-red-500 transition text-lg leading-none"
+                                  onClick={() => setEditVariant(v)}
+                                  className="text-xs text-brown/50 hover:text-brown underline transition"
                                 >
-                                  ×
+                                  Edit
                                 </button>
-                              )}
+                                <button
+                                  onClick={() => handleDeleteVariant(v)}
+                                  className="text-xs text-red-400 hover:text-red-600 underline transition"
+                                >
+                                  Delete
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -497,6 +661,15 @@ function ProductModal({
           onClose={() => setShowAddSize(false)}
         />
       )}
+
+      {editVariant && (
+        <EditVariantModal
+          variant={editVariant}
+          productSlug={slug}
+          onSave={handleSaveVariant}
+          onClose={() => setEditVariant(null)}
+        />
+      )}
     </>
   )
 }
@@ -519,12 +692,8 @@ function DeleteConfirmModal({
           <span className="font-semibold text-brown">{productName}</span> will be permanently deleted. This cannot be undone.
         </p>
         <div className="flex gap-3 mt-2">
-          <button onClick={onClose} className="flex-1 bg-gray-100 text-brown font-semibold rounded-2xl py-3 hover:bg-gray-200 transition text-sm">
-            Cancel
-          </button>
-          <button onClick={onConfirm} className="flex-1 bg-red-500 text-white font-semibold rounded-2xl py-3 hover:bg-red-600 transition text-sm">
-            Delete
-          </button>
+          <button onClick={onClose} className="flex-1 bg-gray-100 text-brown font-semibold rounded-2xl py-3 hover:bg-gray-200 transition text-sm">Cancel</button>
+          <button onClick={onConfirm} className="flex-1 bg-red-500 text-white font-semibold rounded-2xl py-3 hover:bg-red-600 transition text-sm">Delete</button>
         </div>
       </div>
     </div>
@@ -648,37 +817,18 @@ export default function AdminProductsPage() {
                       )}
                     </div>
                     <div className="flex gap-2 shrink-0">
-                      <button
-                        onClick={() => { setEditProduct(p); setModal('edit') }}
-                        className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition text-brown/60 hover:text-brown"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
+                      <button onClick={() => { setEditProduct(p); setModal('edit') }} className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-gray-100 transition text-brown/60 hover:text-brown">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                       </button>
-                      <button
-                        onClick={() => setDeleteProduct(p)}
-                        className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-red-50 transition text-red-400 hover:text-red-600"
-                      >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                      <button onClick={() => setDeleteProduct(p)} className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-red-50 transition text-red-400 hover:text-red-600">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                       </button>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-2 pt-1 border-t border-gray-50">
-                    <div>
-                      <p className="text-xs text-brown/40">Collection</p>
-                      <p className="text-sm font-semibold text-brown">{p.collections?.name ?? '—'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-brown/40">Variants</p>
-                      <p className="text-sm font-semibold text-brown">{p.variants.length}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-brown/40">Price From</p>
-                      <p className="text-sm font-semibold text-brown">{minPrice !== null ? formatPrice(minPrice) : '—'}</p>
-                    </div>
+                    <div><p className="text-xs text-brown/40">Collection</p><p className="text-sm font-semibold text-brown">{p.collections?.name ?? '—'}</p></div>
+                    <div><p className="text-xs text-brown/40">Variants</p><p className="text-sm font-semibold text-brown">{p.variants.length}</p></div>
+                    <div><p className="text-xs text-brown/40">Price From</p><p className="text-sm font-semibold text-brown">{minPrice !== null ? formatPrice(minPrice) : '—'}</p></div>
                   </div>
                 </div>
               )
@@ -723,30 +873,18 @@ export default function AdminProductsPage() {
                                 <div key={c} title={c} className="w-5 h-5 rounded-full border border-peach-light" style={{ backgroundColor: c }} />
                               ))}
                             </div>
-                          ) : (
-                            <span className="text-brown/30">—</span>
-                          )}
+                          ) : <span className="text-brown/30">—</span>}
                         </td>
                         <td className="px-5 py-4 text-brown">{p.variants.length}</td>
                         <td className="px-5 py-4 text-brown">{minPrice !== null ? formatPrice(minPrice) : '—'}</td>
                         <td className="px-5 py-4"><ActiveBadge active={p.is_active} /></td>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => { setEditProduct(p); setModal('edit') }}
-                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition text-brown/50 hover:text-brown"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                              </svg>
+                            <button onClick={() => { setEditProduct(p); setModal('edit') }} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 transition text-brown/50 hover:text-brown">
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                             </button>
-                            <button
-                              onClick={() => setDeleteProduct(p)}
-                              className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 transition text-red-400 hover:text-red-600"
-                            >
-                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
+                            <button onClick={() => setDeleteProduct(p)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 transition text-red-400 hover:text-red-600">
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
                           </div>
                         </td>
@@ -761,19 +899,11 @@ export default function AdminProductsPage() {
               <div className="flex items-center justify-between mt-4 text-sm text-brown/50">
                 <span>Page {page} of {totalPages}</span>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => setPage(p => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-white border border-whitewash-off disabled:opacity-30 transition"
-                  >
+                  <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="flex items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-white border border-whitewash-off disabled:opacity-30 transition">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
                     Previous
                   </button>
-                  <button
-                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                    disabled={page === totalPages}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-white border border-whitewash-off disabled:opacity-30 transition"
-                  >
+                  <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="flex items-center gap-1 px-3 py-1.5 rounded-xl hover:bg-white border border-whitewash-off disabled:opacity-30 transition">
                     Next
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                   </button>

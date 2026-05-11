@@ -21,90 +21,87 @@ function getColorLabel(hex: string): string {
 
 interface Props {
   variants: Variant[]
-  onSelect?: (v: Variant) => void
+  onSelect?: (v: Variant | null) => void
 }
 
 export function ProductVariantSelector({ variants, onSelect }: Props) {
-  const colors = [...new Set(variants.map(v => v.color).filter(Boolean))] as string[]
-  const sizes = [...new Set(variants.map(v => v.size))]
-  const hasColors = colors.length > 0
-
-  const [selectedColor, setSelectedColor] = useState<string | null>(colors[0] ?? null)
   const [selectedSize, setSelectedSize] = useState<string | null>(null)
+  const [selectedColor, setSelectedColor] = useState<string | null>(null)
 
-  const availableSizes = hasColors
-    ? variants.filter(v => v.color === selectedColor).map(v => v.size)
-    : sizes
+  // All unique sizes
+  const sizes = [...new Set(variants.map(v => v.size))]
 
-  function selectColor(color: string) {
-    setSelectedColor(color)
-    setSelectedSize(null)
-    onSelect && onSelect(null as any)
+  // All unique colors across all variants
+  const allColors = [...new Set(variants.map(v => v.color).filter(Boolean))] as string[]
+  const hasColors = allColors.length > 0
+
+  // Colors available for selected size
+  const colorsForSize = selectedSize
+    ? variants.filter(v => v.size === selectedSize).map(v => v.color).filter(Boolean) as string[]
+    : []
+
+  // In-stock colors for selected size
+  const inStockColorsForSize = selectedSize
+    ? variants.filter(v => v.size === selectedSize && v.stock_qty > 0).map(v => v.color).filter(Boolean) as string[]
+    : []
+
+  // Is a size in stock at all (any color)
+  function isSizeInStock(size: string) {
+    return variants.some(v => v.size === size && v.stock_qty > 0)
+  }
+
+  // Is a size available (has variants)
+  function isSizeAvailable(size: string) {
+    return variants.some(v => v.size === size)
   }
 
   function selectSize(size: string) {
     setSelectedSize(size)
-    const v = variants.find(v =>
-      v.size === size && (!hasColors || v.color === selectedColor)
-    )
-    if (v && onSelect) onSelect(v)
+    setSelectedColor(null)
+    onSelect?.(null)
+  }
+
+  function selectColor(color: string) {
+    setSelectedColor(color)
+    const v = variants.find(v => v.size === selectedSize && v.color === color)
+    onSelect?.(v ?? null)
+  }
+
+  // If no colors — selecting size is enough
+  function handleSizeOnlySelect(size: string) {
+    setSelectedSize(size)
+    const v = variants.find(v => v.size === size)
+    onSelect?.(v ?? null)
   }
 
   return (
     <div className="space-y-5 mt-6">
-      {/* Color selector */}
-      {hasColors && (
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm text-brown">Color</p>
-            {selectedColor && (
-              <p className="text-xs text-brown-light">{getColorLabel(selectedColor)}</p>
-            )}
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {colors.map(color => {
-              const hasStock = variants.some(v => v.color === color && v.stock_qty > 0)
-              return (
-                <button
-                  key={color}
-                  onClick={() => hasStock && selectColor(color)}
-                  disabled={!hasStock}
-                  title={getColorLabel(color)}
-                  className={cn(
-                    'w-8 h-8 rounded-full border-2 transition-all',
-                    selectedColor === color ? 'border-brown scale-110' : 'border-transparent hover:border-brown/40',
-                    !hasStock && 'opacity-30 cursor-not-allowed'
-                  )}
-                  style={{ backgroundColor: color }}
-                />
-              )
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Size selector */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <p className="text-sm text-brown">Size</p>
+          {selectedSize && (
+            <p className="text-xs text-brown-light">{selectedSize}</p>
+          )}
         </div>
         <div className="flex gap-2 flex-wrap">
           {sizes.map(size => {
-            const available = availableSizes.includes(size)
-            const v = variants.find(v =>
-              v.size === size && (!hasColors || v.color === selectedColor)
-            )
-            const outOfStock = v ? v.stock_qty === 0 : !available
+            const available = isSizeAvailable(size)
+            const inStock = isSizeInStock(size)
+            const isSelected = selectedSize === size
             return (
               <button
                 key={size}
-                onClick={() => !outOfStock && selectSize(size)}
-                disabled={outOfStock || !available}
+                onClick={() => {
+                  if (!inStock) return
+                  hasColors ? selectSize(size) : handleSizeOnlySelect(size)
+                }}
+                disabled={!available || !inStock}
                 className={cn(
                   'w-12 h-12 rounded-lg border text-sm font-medium transition-colors',
-                  selectedSize === size
+                  isSelected
                     ? 'bg-brown text-whitewash border-brown'
-                    : available && !outOfStock
+                    : inStock
                     ? 'border-peach text-brown hover:border-brown'
                     : 'border-peach text-brown/30 opacity-40 cursor-not-allowed line-through'
                 )}
@@ -115,6 +112,65 @@ export function ProductVariantSelector({ variants, onSelect }: Props) {
           })}
         </div>
       </div>
+
+      {/* Color selector — only shows after size is picked */}
+      {hasColors && selectedSize && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm text-brown">Color</p>
+            {selectedColor && (
+              <p className="text-xs text-brown-light">{getColorLabel(selectedColor)}</p>
+            )}
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {allColors.map(color => {
+              const availableForSize = colorsForSize.includes(color)
+              const inStockForSize = inStockColorsForSize.includes(color)
+              const isSelected = selectedColor === color
+              return (
+                <button
+                  key={color}
+                  onClick={() => {
+                    if (!availableForSize || !inStockForSize) return
+                    selectColor(color)
+                  }}
+                  disabled={!availableForSize || !inStockForSize}
+                  title={getColorLabel(color)}
+                  className={cn(
+                    'w-9 h-9 rounded-full border-2 transition-all relative',
+                    isSelected
+                      ? 'border-brown scale-110'
+                      : availableForSize && inStockForSize
+                      ? 'border-transparent hover:border-brown/40'
+                      : 'border-transparent opacity-30 cursor-not-allowed'
+                  )}
+                  style={{ backgroundColor: color }}
+                >
+                  {/* Out of stock slash */}
+                  {availableForSize && !inStockForSize && (
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <svg className="w-full h-full" viewBox="0 0 36 36">
+                        <line x1="4" y1="32" x2="32" y2="4" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+                      </svg>
+                    </span>
+                  )}
+                  {/* Not available for this size */}
+                  {!availableForSize && (
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <svg className="w-full h-full" viewBox="0 0 36 36">
+                        <line x1="4" y1="32" x2="32" y2="4" stroke="rgba(0,0,0,0.2)" strokeWidth="2.5" strokeLinecap="round" />
+                      </svg>
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+          {selectedSize && !selectedColor && (
+            <p className="text-xs text-brown/40 mt-2">Select a color to continue</p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

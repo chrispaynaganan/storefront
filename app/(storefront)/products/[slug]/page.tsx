@@ -152,10 +152,11 @@ export default async function ProductDetailPage({ params }: Props) {
             />
 
             {product.description && (
-              <p className="text-brown-light text-sm leading-relaxed mt-4">
-                {product.description}
-              </p>
-            )}
+  <div
+    className="prose prose-sm text-brown-light mt-4 max-w-none"
+    dangerouslySetInnerHTML={{ __html: product.description }}
+  />
+)}
 
             <AddToCartButton variants={product.variants ?? []} productId={product.id} />
           </div>
