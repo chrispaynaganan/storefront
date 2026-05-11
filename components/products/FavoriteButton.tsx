@@ -1,12 +1,11 @@
 'use client'
-
 import { useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase'
 
 interface FavoriteButtonProps {
   productId: string
   initialFavorited: boolean
-  size?: 'sm' | 'md'
+  size?: 'sm' | 'md' | 'lg'
   className?: string
 }
 
@@ -20,45 +19,31 @@ export function FavoriteButton({
   const [isPending, startTransition] = useTransition()
   const supabase = createClient()
 
-  const iconSize = size === 'sm' ? 'w-4 h-4' : 'w-5 h-5'
-  const buttonSize = size === 'sm' ? 'p-1.5' : 'p-2'
+  const iconSize = size === 'sm' ? 'w-4 h-4' : size === 'lg' ? 'w-6 h-6' : 'w-5 h-5'
+  const buttonSize = size === 'sm' ? 'p-1.5' : size === 'lg' ? 'p-2.5' : 'p-2'
 
   async function toggle() {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      window.location.href = '/login'
-      return
-    }
-
+    if (!user) { window.location.href = '/login'; return }
     setFavorited(prev => !prev)
-
     startTransition(async () => {
       if (favorited) {
-        await supabase
-          .from('favorites')
-          .delete()
-          .eq('product_id', productId)
-          .eq('user_id', user.id)
+        await supabase.from('favorites').delete()
+          .eq('product_id', productId).eq('user_id', user.id)
       } else {
-        await supabase
-          .from('favorites')
-          .insert({ product_id: productId, user_id: user.id })
+        await supabase.from('favorites').insert({ product_id: productId, user_id: user.id })
       }
     })
   }
 
   return (
     <button
-      onClick={(e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        toggle()
-      }}
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle() }}
       disabled={isPending}
       aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
       className={`rounded-full transition-all duration-200 ${buttonSize} ${
-        favorited ? 'text-brown' : 'text-brown/40 hover:text-brown/80'
-      } hover:bg-peach/30 disabled:opacity-50 ${className}`}
+        favorited ? 'text-red-500' : 'text-brown/40 hover:text-red-400'
+      } hover:bg-red-50 disabled:opacity-50 ${className}`}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
