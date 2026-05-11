@@ -3,6 +3,22 @@ import { useState } from 'react'
 import { cn } from '@/lib/utils'
 import type { Variant } from '@/types'
 
+const PRESET_COLORS = [
+  { label: 'Black', value: '#000000' },
+  { label: 'White', value: '#FFFFFF' },
+  { label: 'Gray', value: '#9CA3AF' },
+  { label: 'Brown', value: '#3B1F0E' },
+  { label: 'Beige', value: '#F5F0E8' },
+  { label: 'Navy', value: '#1E3A5F' },
+  { label: 'Olive', value: '#6B7C3F' },
+  { label: 'Red', value: '#DC2626' },
+  { label: 'Pink', value: '#FFCBA4' },
+]
+
+function getColorLabel(hex: string): string {
+  return PRESET_COLORS.find(c => c.value.toLowerCase() === hex.toLowerCase())?.label ?? hex
+}
+
 interface Props {
   variants: Variant[]
   onSelect?: (v: Variant) => void
@@ -42,7 +58,7 @@ export function ProductVariantSelector({ variants, onSelect }: Props) {
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm text-brown">Color</p>
             {selectedColor && (
-              <p className="text-xs text-brown-light capitalize">{selectedColor}</p>
+              <p className="text-xs text-brown-light">{getColorLabel(selectedColor)}</p>
             )}
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -53,7 +69,7 @@ export function ProductVariantSelector({ variants, onSelect }: Props) {
                   key={color}
                   onClick={() => hasStock && selectColor(color)}
                   disabled={!hasStock}
-                  title={color}
+                  title={getColorLabel(color)}
                   className={cn(
                     'w-8 h-8 rounded-full border-2 transition-all',
                     selectedColor === color ? 'border-brown scale-110' : 'border-transparent hover:border-brown/40',
