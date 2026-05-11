@@ -1,13 +1,8 @@
 'use client'
 
-// app/(admin)/admin/users/page.tsx
-
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase'
 import { formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
-
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface User {
   id: string
@@ -18,8 +13,6 @@ interface User {
   avatar_url: string | null
   created_at: string
 }
-
-// ─── Shared components ────────────────────────────────────────────────────────
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -65,19 +58,21 @@ function EditBtn({ onClick }: { onClick: () => void }) {
   )
 }
 
-// ─── Edit user modal ──────────────────────────────────────────────────────────
-
 function EditUserModal({ user, onClose, onSaved }: { user: User; onClose: () => void; onSaved: () => void }) {
-  const supabase = createClient()
   const [role, setRole] = useState(user.role)
   const [isActive, setIsActive] = useState(user.is_active)
   const [saving, setSaving] = useState(false)
 
   async function handleSave() {
     setSaving(true)
-    await supabase.from('users').update({ role, is_active: isActive }).eq('id', user.id)
+    await fetch('/api/admin/users', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: user.id, role, is_active: isActive }),
+    })
     setSaving(false)
-    onSaved(); onClose()
+    onSaved()
+    onClose()
   }
 
   return (
@@ -94,7 +89,6 @@ function EditUserModal({ user, onClose, onSaved }: { user: User; onClose: () => 
           </button>
         </div>
         <div className="overflow-y-auto flex-1 px-6 py-5 flex flex-col gap-5">
-          {/* User info */}
           <div className="flex items-center gap-3 bg-whitewash rounded-2xl p-4">
             {user.avatar_url
               ? <img src={user.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
@@ -131,10 +125,7 @@ function EditUserModal({ user, onClose, onSaved }: { user: User; onClose: () => 
   )
 }
 
-// ─── Main page ────────────────────────────────────────────────────────────────
-
 export default function AdminUsersPage() {
-  const supabase = createClient()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -145,18 +136,11 @@ export default function AdminUsersPage() {
 
   async function load() {
     setLoading(true)
-    const from = (page - 1) * PER_PAGE
-    let query = supabase
-      .from('users')
-      .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(from, from + PER_PAGE - 1)
-
-    if (search.trim()) query = query.or(`email.ilike.%${search}%,full_name.ilike.%${search}%`)
-
-    const { data, count } = await query
-    setUsers((data as User[]) ?? [])
-    setTotal(count ?? 0)
+    const params = new URLSearchParams({ page: String(page), search })
+    const res = await fetch(`/api/admin/users?${params}`)
+    const json = await res.json()
+    setUsers(json.data ?? [])
+    setTotal(json.count ?? 0)
     setLoading(false)
   }
 
@@ -170,7 +154,6 @@ export default function AdminUsersPage() {
         <h1 className="text-4xl font-bold text-brown tracking-tight">Customers</h1>
       </div>
 
-      {/* Search */}
       <div className="relative mb-6 max-w-sm">
         <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brown/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
         <input
