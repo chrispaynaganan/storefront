@@ -5,8 +5,16 @@ import './globals.css'
 const quicksand = Quicksand({ subsets: ['latin'], variable: '--font-quicksand' })
 
 export const metadata: Metadata = {
-  title: { default: 'Known&Worn', template: '%s | Known&Worn' },
-  description: 'Premium hoodies and shirts',
+  title: 'Known & Worn',
+  description: 'Clean, expressive streetwear. Built for everyday expression, made in the Philippines.',
+  openGraph: {
+    siteName: 'Known & Worn',
+    type: 'website',
+    locale: 'en_PH',
+  },
+  twitter: {
+    card: 'summary_large_image',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
