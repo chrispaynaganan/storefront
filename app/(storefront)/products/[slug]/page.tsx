@@ -31,12 +31,12 @@ export default async function ProductDetailPage({ params }: Props) {
   return (
     <div className="max-w-6xl mx-auto px-4 py-10">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-xs text-[#6B3A22] mb-8">
-        <a href="/" className="hover:text-[#3B1F0E]">Home</a>
+      <nav className="flex items-center gap-2 text-xs text-brown-light mb-8">
+        <a href="/" className="hover:text-brown">Home</a>
         <span>/</span>
-        <a href="/products" className="hover:text-[#3B1F0E]">Products</a>
+        <a href="/products" className="hover:text-brown">Products</a>
         <span>/</span>
-        <span className="text-[#3B1F0E]">{product.name}</span>
+        <span className="text-brown">{product.name}</span>
       </nav>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -45,12 +45,12 @@ export default async function ProductDetailPage({ params }: Props) {
         <div>
           {product.collection && (
             <a href={`/collections/${product.collection.slug}`}
-              className="text-xs text-[#6B3A22] uppercase tracking-widest hover:text-[#3B1F0E]">
+              className="text-xs text-brown-light uppercase tracking-widest hover:text-brown">
               {product.collection.name}
             </a>
           )}
           <div className="flex items-center gap-3 mt-2 mb-3">
-            <h1 className="text-3xl font-light text-[#3B1F0E]">{product.name}</h1>
+            <h1 className="text-3xl font-light text-brown">{product.name}</h1>
             {product.is_bestseller && <ProductBadge label="Bestseller" />}
           </div>
 
@@ -60,7 +60,7 @@ export default async function ProductDetailPage({ params }: Props) {
           />
 
           {product.description && (
-            <p className="text-[#6B3A22] text-sm leading-relaxed mt-4">{product.description}</p>
+            <p className="text-brown-light text-sm leading-relaxed mt-4">{product.description}</p>
           )}
 
           <AddToCartButton variants={product.variants ?? []} productId={product.id} />
