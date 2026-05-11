@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@paypal/react-paypal-js": "^9.2.0",
+    "@react-email/components": "^1.0.12",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.105.3",
     "@tailwindcss/postcss": "^4.2.4",
@@ -20,10 +21,12 @@
     "postcss": "^8.5.14",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
+    "resend": "^6.12.3",
     "tailwindcss": "^4.2.4",
     "typescript": "^6.0.3"
   },
   "devDependencies": {
+    "@react-email/ui": "^6.1.1",
     "@types/react": "19.2.14"
   }
 }
