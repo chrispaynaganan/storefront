@@ -12,7 +12,7 @@ export function ProductGrid({ products = [], favoritedIds }: Props) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       {products.map((p, i) => (
-        <ProductCard key={p.id} product={p} favoritedIds={favoritedIds} priority={i < 2} />
+        <ProductCard key={p.id} product={p} favoritedIds={favoritedIds} priority={i < 4} />
       ))}
     </div>
   )
