@@ -20,6 +20,7 @@ export function SearchBar({ onNavigate }: Props) {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResult[]>([])
   const [open, setOpen] = useState(false)
+  const [notFound, setNotFound] = useState(false)
   const [loading, setLoading] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const [isPending, startTransition] = useTransition()
@@ -32,18 +33,21 @@ export function SearchBar({ onNavigate }: Props) {
     if (query.trim().length < 2) {
       setResults([])
       setOpen(false)
+      setNotFound(false)
       return
     }
     debounceRef.current = setTimeout(async () => {
       setLoading(true)
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
-        const data = await res.json()
+        const data: SearchResult[] = await res.json()
         setResults(data)
-        setOpen(data.length > 0)
+        setNotFound(data.length === 0)
+        setOpen(true)
         setActiveIndex(-1)
       } catch {
         setResults([])
+        setNotFound(false)
       } finally {
         setLoading(false)
       }
@@ -64,14 +68,20 @@ export function SearchBar({ onNavigate }: Props) {
   function navigate(path: string) {
     setOpen(false)
     setQuery('')
+    setResults([])
+    setNotFound(false)
     onNavigate?.()
     startTransition(() => router.push(path))
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  function submitSearch() {
     const trimmed = query.trim()
     navigate(trimmed ? `/products?q=${encodeURIComponent(trimmed)}` : '/products')
+  }
+
+  function handleFormSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    submitSearch()
   }
 
   function handleSelect(slug: string) {
@@ -101,9 +111,11 @@ export function SearchBar({ onNavigate }: Props) {
     return `₱${min.toLocaleString()}`
   }
 
+  const showDropdown = open && query.trim().length >= 2
+
   return (
     <div ref={containerRef} className="relative w-full">
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleFormSubmit}>
         <div className="relative flex items-center">
           <svg
             className="absolute left-3 w-3.5 h-3.5 text-brown-light shrink-0 pointer-events-none"
@@ -117,8 +129,9 @@ export function SearchBar({ onNavigate }: Props) {
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            onFocus={() => results.length > 0 && setOpen(true)}
+            onFocus={() => query.trim().length >= 2 && setOpen(true)}
             placeholder="Search products..."
+            autoComplete="off"
             className="w-full bg-whitewash-off hover:bg-[#ECEAE6] transition-colors rounded-full h-8.5 pl-9 pr-4 text-[13px] text-brown placeholder:text-brown-light/60 focus:outline-none focus:ring-2 focus:ring-peach"
           />
           {(loading || isPending) && (
@@ -127,12 +140,13 @@ export function SearchBar({ onNavigate }: Props) {
         </div>
       </form>
 
-      {open && results.length > 0 && (
+      {showDropdown && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl border border-peach-light shadow-lg overflow-hidden z-50">
-          {/* Search all results row */}
+
+          {/* Search all row — always shown when dropdown is open */}
           <button
             type="button"
-            onClick={handleSubmit as any}
+            onClick={submitSearch}
             className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-whitewash transition-colors border-b border-peach-light"
           >
             <svg className="w-3.5 h-3.5 text-brown-light shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
@@ -142,6 +156,13 @@ export function SearchBar({ onNavigate }: Props) {
               Search for <span className="text-brown font-medium">"{query}"</span>
             </span>
           </button>
+
+          {/* No results */}
+          {notFound && !loading && (
+            <div className="px-4 py-4 text-center">
+              <p className="text-[13px] text-brown/40">No products found for "{query}"</p>
+            </div>
+          )}
 
           {/* Product suggestions */}
           {results.map((result, i) => (

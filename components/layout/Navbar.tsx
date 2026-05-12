@@ -9,14 +9,14 @@ import { SearchBar } from '@/components/layout/SearchBar'
 import { useCart } from '@/context/CartContext'
 
 const NAV_LINKS = [
-  { label: 'Women',   href: '/' },
-  { label: 'Men',     href: '/' },
-  { label: 'Kids',    href: '/' },
+  { label: 'Women',   href: '/women' },
+  { label: 'Men',     href: '/men' },
+  { label: 'Kids',    href: '/kids' },
   { label: 'Hoodies', href: '/collections/hoodies' },
   { label: 'Shirts',  href: '/collections/shirts' },
-  { label: 'New',     href: '/' },
-  { label: 'Sports',  href: '/' },
-  { label: 'Sale',    href: '/collections/sale', sale: true },
+  { label: 'New',     href: '/new' },
+  { label: 'Sports',  href: '/sports' },
+  { label: 'Sale',    href: '/sale', sale: true },
 ]
 
 type Props = {

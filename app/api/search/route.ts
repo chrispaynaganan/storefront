@@ -8,11 +8,12 @@ export async function GET(request: Request) {
   if (!q || q.length < 2) return NextResponse.json([])
 
   const supabase = await createServerSupabaseClient()
+
   const { data } = await supabase
     .from('products')
     .select('id, name, slug, image_urls, variants(price)')
     .eq('is_active', true)
-    .ilike('name', `%${q}%`)
+    .or(`name.ilike.%${q}%,description.ilike.%${q}%`)
     .limit(6)
 
   return NextResponse.json(data ?? [])
