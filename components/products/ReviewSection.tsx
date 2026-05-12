@@ -55,7 +55,8 @@ function StarRating({ value, onChange }: { value: number; onChange?: (v: number)
 
 function ReviewCard({ review, currentUserId, onDelete }: { review: Review; currentUserId: string | null; onDelete: (id: string) => void }) {
   const [lightboxImg, setLightboxImg] = useState<string | null>(null)
-  const initials = (review.user.full_name ?? review.user.email)[0].toUpperCase()
+  const displayName = review.user?.full_name ?? review.user?.email ?? 'Unknown'
+const initials = displayName[0].toUpperCase()
 
   return (
     <div className="py-6 border-b border-peach-light last:border-0">
