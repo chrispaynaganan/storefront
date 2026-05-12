@@ -20,7 +20,6 @@ interface Props {
 }
 
 export function CollectionsGrid({ collections }: Props) {
-  // Map seeded collections by slug for image lookups
   const bySlug = Object.fromEntries(collections.map(c => [c.slug, c]))
 
   return (
@@ -33,7 +32,7 @@ export function CollectionsGrid({ collections }: Props) {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {CATEGORIES.map(({ label, href, description }) => {
+        {CATEGORIES.map(({ label, href, description }, i) => {
           const slug = label.toLowerCase()
           const collection = bySlug[slug]
           const imageUrl = collection?.image_url ?? null
@@ -44,17 +43,16 @@ export function CollectionsGrid({ collections }: Props) {
               href={href}
               className="group relative aspect-3/4 bg-whitewash-off rounded-2xl overflow-hidden block"
             >
-              {/* Image */}
               {imageUrl ? (
                 <Image
                   src={imageUrl}
                   alt={label}
                   fill
                   sizes="(max-width: 768px) 50vw, 25vw"
+                  priority={i === 0}
                   className="object-cover group-hover:scale-105 transition-transform duration-700"
                 />
               ) : (
-                /* Placeholder gradient when no image */
                 <div
                   className="absolute inset-0"
                   style={{
@@ -69,10 +67,8 @@ export function CollectionsGrid({ collections }: Props) {
                 />
               )}
 
-              {/* Overlay */}
               <div className="absolute inset-0 bg-linear-to-t from-brown/70 via-transparent to-transparent" />
 
-              {/* Text */}
               <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5">
                 <p className="text-whitewash font-semibold text-base sm:text-lg leading-tight">{label}</p>
                 <p className="text-whitewash/70 text-xs mt-0.5 group-hover:text-whitewash transition-colors">
