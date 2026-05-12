@@ -8,9 +8,10 @@ import type { Product } from '@/types'
 interface ProductCardProps {
   product: Product
   favoritedIds?: Set<string>
+  priority?: boolean
 }
 
-export function ProductCard({ product, favoritedIds }: ProductCardProps) {
+export function ProductCard({ product, favoritedIds, priority }: ProductCardProps) {
   const defaultVariant = product.variants?.[0]
   return (
     <Link href={`/products/${product.slug}`} className="group block">
@@ -21,6 +22,7 @@ export function ProductCard({ product, favoritedIds }: ProductCardProps) {
             alt={product.name}
             fill
             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+            priority={priority}
             className="object-cover group-hover:scale-105 transition-transform duration-500"
           />
         )}
