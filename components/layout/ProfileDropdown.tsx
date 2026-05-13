@@ -38,7 +38,7 @@ export function ProfileDropdown({ user }: Props) {
     <div ref={ref} className="relative hidden sm:block">
       <button
   onClick={() => setOpen(!open)}
-  className="w-8 h-8 rounded-full bg-[#3B1F0E] text-[#FAF7F4] text-[11px] font-medium flex items-center justify-center hover:bg-[#5a3020] transition-colors overflow-hidden"
+  className="w-8 h-8 rounded-full bg-brown text-whitewash text-[11px] font-medium flex items-center justify-center hover:bg-[#5a3020] transition-colors overflow-hidden"
   aria-label="Account menu"
   aria-expanded={open}
 >
@@ -56,10 +56,10 @@ export function ProfileDropdown({ user }: Props) {
 </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-48 bg-[#FAF7F4] border border-[#E8E2DC] rounded-xl shadow-md overflow-hidden z-50">
+        <div className="absolute right-0 top-full mt-2 w-48 bg-brown border border-[#E8E2DC] rounded-xl shadow-md overflow-hidden z-50">
           {/* User info */}
           <div className="px-4 py-3 border-b border-[#E8E2DC]">
-            <p className="text-[13px] font-medium text-[#3B1F0E] truncate">
+            <p className="text-[13px] font-medium text-brown truncate">
               {user.full_name ?? 'My Account'}
             </p>
             <p className="text-[11px] text-[#999] truncate">{user.email}</p>
@@ -70,21 +70,21 @@ export function ProfileDropdown({ user }: Props) {
             <Link
               href="/account"
               onClick={() => setOpen(false)}
-              className="block px-4 py-2.5 text-[13px] text-[#3B1F0E] hover:bg-[#F0EAE4] transition-colors"
+              className="block px-4 py-2.5 text-[13px] text-brown hover:bg-[#F0EAE4] transition-colors"
             >
               Account settings
             </Link>
             <Link
               href="/account/orders"
               onClick={() => setOpen(false)}
-              className="block px-4 py-2.5 text-[13px] text-[#3B1F0E] hover:bg-[#F0EAE4] transition-colors"
+              className="block px-4 py-2.5 text-[13px] text-brown hover:bg-[#F0EAE4] transition-colors"
             >
               My orders
             </Link>
             <Link
               href="/account/addresses"
               onClick={() => setOpen(false)}
-              className="block px-4 py-2.5 text-[13px] text-[#3B1F0E] hover:bg-[#F0EAE4] transition-colors"
+              className="block px-4 py-2.5 text-[13px] text-brown hover:bg-[#F0EAE4] transition-colors"
             >
               Addresses
             </Link>
