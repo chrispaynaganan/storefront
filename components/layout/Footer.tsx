@@ -1,12 +1,14 @@
 import Link from 'next/link'
-import { SITE_NAME } from '@/lib/constants'
+import { Logo } from '@/components/ui/Logo'
 
 export function Footer() {
   return (
     <footer className="border-t border-peach-light bg-whitewash mt-20">
       <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-2 md:grid-cols-4 gap-8 text-sm text-brown-light">
         <div>
-          <p className="font-medium text-brown mb-3">{SITE_NAME}</p>
+          <div className="mb-3">
+            <Logo width={110} />
+          </div>
           <p className="leading-relaxed">Clean, expressive streetwear. Built for everyday wear, made in the Philippines.</p>
           <div className="flex items-center gap-3 mt-4">
             <a href="https://www.facebook.com/profile.php?id=61570705350137" target="_blank" rel="noopener noreferrer"
@@ -62,7 +64,7 @@ export function Footer() {
       </div>
 
       <div className="border-t border-peach-light text-center text-xs text-brown-light py-4 space-x-4">
-        <span>© {new Date().getFullYear()} {SITE_NAME}. All rights reserved.</span>
+        <span>© {new Date().getFullYear()} Known & Worn. All rights reserved.</span>
         <Link href="/privacy" className="hover:text-brown transition-colors">Privacy</Link>
         <Link href="/terms" className="hover:text-brown transition-colors">Terms</Link>
       </div>

@@ -12,10 +12,10 @@ interface Review {
   image_urls: string[]
   created_at: string
   user: {
-    full_name: string | null
-    avatar_url: string | null
-    email: string
-  }
+  full_name: string | null
+  avatar_url: string | null
+  email: string
+} | null
 }
 
 interface Props {
@@ -63,14 +63,14 @@ const initials = displayName[0].toUpperCase()
       <div className="flex items-start justify-between gap-4 mb-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-peach flex items-center justify-center shrink-0 overflow-hidden">
-            {review.user.avatar_url ? (
+            {review.user?.avatar_url ? (
               <Image src={review.user.avatar_url} alt="" width={36} height={36} className="object-cover" />
             ) : (
               <span className="text-brown font-medium text-sm">{initials}</span>
             )}
           </div>
           <div>
-            <p className="text-sm font-medium text-brown">{review.user.full_name ?? 'Customer'}</p>
+            <p className="text-sm font-medium text-brown">{review.user?.full_name ?? 'Customer'}</p>
             <p className="text-xs text-brown-light">{formatDate(review.created_at)}</p>
           </div>
         </div>
