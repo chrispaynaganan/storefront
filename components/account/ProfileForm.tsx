@@ -27,7 +27,7 @@ export function ProfileForm({ user }: { user: User | null }) {
     const { error } = await supabase.storage.from('products').upload(path, file, { upsert: true })
     if (!error) {
       const { data } = supabase.storage.from('products').getPublicUrl(path)
-      setAvatarUrl(data.publicUrl)
+      setAvatarUrl(`${data.publicUrl}?t=${Date.now()}`)
     }
     setUploading(false)
   }
