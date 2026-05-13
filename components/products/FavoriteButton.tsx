@@ -42,8 +42,10 @@ export function FavoriteButton({
       disabled={isPending}
       aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
       className={`rounded-full transition-all duration-200 ${buttonSize} ${
-        favorited ? 'text-red-500' : 'text-brown/40 hover:text-red-400'
-      } hover:bg-red-50 disabled:opacity-50 ${className}`}
+        favorited
+          ? 'text-red-500 hover:bg-red-50'
+          : 'text-brown hover:bg-brown/5'
+      } disabled:opacity-50 ${className}`}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
@@ -51,7 +53,7 @@ export function FavoriteButton({
         className={iconSize}
         fill={favorited ? 'currentColor' : 'none'}
         stroke="currentColor"
-        strokeWidth={favorited ? 0 : 1.5}
+        strokeWidth={favorited ? 0 : 1.75}
       >
         <path
           strokeLinecap="round"

@@ -100,68 +100,114 @@ export default async function ProductDetailPage({ params }: Props) {
     })),
   }
 
+  // Favorite + Share actions — shared between image overlay (mobile) and info column (md+)
+  const actions = (
+    <div className="flex items-center gap-2">
+      <FavoriteButton
+        productId={product.id}
+        initialFavorited={isFavorited}
+        size="lg"
+      />
+      <ShareButton title={product.name} />
+    </div>
+  )
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <div className="max-w-6xl mx-auto px-4 py-10">
+
+      <div className="max-w-6xl mx-auto px-4 py-8 md:py-10">
 
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-xs text-brown-light mb-8">
-          <Link href="/" className="hover:text-brown">Home</Link>
-          <span>/</span>
-          <Link href="/products" className="hover:text-brown">Products</Link>
-          <span>/</span>
-          <span className="text-brown">{product.name}</span>
-        </nav>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-          <ProductImages images={product.image_urls ?? []} name={product.name} />
-
-          <div>
-            {product.collection && (
+        <nav className="flex items-center gap-2 text-xs text-brown-light mb-6 md:mb-8">
+          <Link href="/" className="hover:text-brown transition-colors">Home</Link>
+          <span className="text-brown-light/40">/</span>
+          {product.collection ? (
+            <>
               <Link
                 href={`/collections/${product.collection.slug}`}
-                className="text-xs text-brown-light uppercase tracking-widest hover:text-brown"
+                className="hover:text-brown transition-colors"
               >
                 {product.collection.name}
               </Link>
-            )}
+              <span className="text-brown-light/40">/</span>
+            </>
+          ) : (
+            <>
+              <Link href="/products" className="hover:text-brown transition-colors">Products</Link>
+              <span className="text-brown-light/40">/</span>
+            </>
+          )}
+          <span className="text-brown font-medium">{product.name}</span>
+        </nav>
 
-            {/* Title row */}
-            <div className="flex items-start justify-between mt-2 mb-3 gap-4">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="text-3xl font-light text-brown">{product.name}</h1>
-                {product.is_bestseller && <ProductBadge label="Bestseller" />}
-              </div>
-              <div className="flex items-center gap-2 shrink-0 mt-1">
-                <FavoriteButton
-                  productId={product.id}
-                  initialFavorited={isFavorited}
-                  size="lg"
-                />
-                <ShareButton title={product.name} />
-              </div>
+        {/* Main grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+
+          {/* LEFT — images (actions overlay on mobile via prop) */}
+          <ProductImages
+            images={product.image_urls ?? []}
+            name={product.name}
+            overlayActions={actions}
+          />
+
+          {/* RIGHT — product info */}
+          <div>
+
+            {/* Actions row — visible on md+, hidden on mobile (shown in image overlay) */}
+            <div className="hidden md:flex justify-end mb-4">
+              {actions}
             </div>
 
+            {/* Collection / category tags */}
+            <div className="flex flex-wrap gap-2 mb-3">
+              {product.collection && (
+                <Link
+                  href={`/collections/${product.collection.slug}`}
+                  className="inline-block text-xs text-brown border border-peach rounded-full px-3 py-1 hover:bg-peach-light/30 transition-colors"
+                >
+                  {product.collection.name}
+                </Link>
+              )}
+              {product.tags?.map((tag: string) => (
+                <span
+                  key={tag}
+                  className="inline-block text-xs text-brown-light border border-peach-light rounded-full px-3 py-1"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+
+            {/* Product name + badge */}
+            <div className="flex items-start gap-3 flex-wrap">
+              <h1 className="text-3xl font-semibold text-brown leading-tight">
+                {product.name}
+              </h1>
+              {product.is_bestseller && <ProductBadge label="Bestseller" />}
+            </div>
+
+            {/* Price */}
             <ProductPrice
               price={lowestPrice}
-              compareAtPrice={highestCompare && highestCompare > lowestPrice ? highestCompare : null}
+              compareAtPrice={
+                highestCompare && highestCompare > lowestPrice ? highestCompare : null
+              }
             />
 
-            {product.description && (
-  <div
-    className="prose prose-sm text-brown-light mt-4 max-w-none"
-    dangerouslySetInnerHTML={{ __html: product.description }}
-  />
-)}
-
-            <AddToCartButton variants={product.variants ?? []} productId={product.id} />
+            {/* Variant selector + qty + CTAs + description — all in one client component */}
+            <AddToCartButton
+              variants={product.variants ?? []}
+              productId={product.id}
+              description={product.description ?? null}
+            />
           </div>
         </div>
 
+        {/* Reviews */}
         <ReviewSection
           productId={product.id}
           initialReviews={reviews ?? []}

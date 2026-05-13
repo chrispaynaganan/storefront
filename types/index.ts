@@ -52,6 +52,7 @@ export interface Variant {
   product_id: string
   size: string
   color: string | null
+  color_hex: string | null
   stock_qty: number
   price: number
   compare_at_price: number | null
