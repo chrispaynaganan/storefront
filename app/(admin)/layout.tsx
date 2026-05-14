@@ -15,18 +15,22 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const { data: profile } = await supabase
     .from('users')
-    .select('role, avatar_url')
+    .select('role, avatar_url, full_name')
     .eq('id', user.id)
     .single()
 
   if (profile?.role !== 'admin') redirect('/')
 
+  const firstName = profile?.full_name?.split(' ')[0] ?? user.email?.split('@')[0] ?? 'Admin'
+
   return (
     <div className="min-h-screen bg-whitewash">
-      {/* Top navbar — md only (tablet) */}
-      {/* Sidebar — lg+ (desktop) */}
-      {/* Bottom tab bar — mobile only */}
-      <AdminNav userEmail={user.email} avatarUrl={profile?.avatar_url} />
+      <AdminNav
+        userEmail={user.email}
+        avatarUrl={profile?.avatar_url}
+        firstName={firstName}
+        userRole={profile?.role ?? 'admin'}
+      />
 
       {/* Main content: offset for sidebar on lg+, offset for top navbar on md */}
       <div className="lg:pl-78">

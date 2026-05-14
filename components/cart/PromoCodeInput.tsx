@@ -89,7 +89,7 @@ export function PromoCodeInput({ onApply, subtotal }: Props) {
           onClick={handleApply}
           disabled={loading || !code.trim()}
           variant="outline"
-          className="border-[#3B1F0E] text-[#3B1F0E] px-4 py-2.5 rounded-lg flex-shrink-0"
+          className="border-brown text-brown px-4 py-2.5 rounded-lg shrink-0"
         >
           {loading ? '...' : 'Apply'}
         </Button>

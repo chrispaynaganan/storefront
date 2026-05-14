@@ -47,7 +47,7 @@ export default function LookbookPage() {
               {/* TODO: Replace with real image
               <Image src="/lookbook/image-1.jpg" alt={alt} fill className="object-cover" />
               */}
-              <div className="w-full h-full flex items-center justify-center p-6 min-h-[200px]">
+              <div className="w-full h-full flex items-center justify-center p-6 min-h-50">
                 <p className="text-xs text-brown/30 text-center leading-relaxed">{alt}</p>
               </div>
             </div>
