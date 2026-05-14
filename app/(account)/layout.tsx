@@ -9,7 +9,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
   if (!user) redirect('/login')
   return (
     <div className="flex flex-col min-h-screen">
-      <Navbar user={user} />
+      <Navbar user={user} hasSale={false} />
       <div className="flex flex-1 max-w-6xl mx-auto w-full px-4 py-10 gap-10">
         <AccountSidebar />
         <main className="flex-1">{children}</main>
