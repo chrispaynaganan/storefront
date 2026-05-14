@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
+import { logAction, buildDiff } from '@/lib/log-client'
 import { slugify, formatPrice } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import { useEditor, EditorContent } from '@tiptap/react'
@@ -443,6 +444,10 @@ function ProductModal({
         product_type: productType || null,
       }
 
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: profile } = await supabase
+        .from('users').select('full_name, role').eq('id', user?.id ?? '').single()
+
       if (mode === 'add') {
         const { data: prod, error: prodErr } = await supabase
           .from('products').insert(payload).select('id').single()
@@ -451,6 +456,11 @@ function ProductModal({
           const { error: vErr } = await supabase.from('variants').insert(variants.map(v => ({ ...v, product_id: prod.id })))
           if (vErr) throw vErr
         }
+        await logAction({
+          userId: user?.id, userName: profile?.full_name ?? user?.email, userRole: profile?.role,
+          action: 'created', entity: 'product', entityId: prod.id, entityName: name,
+          metadata: { audience: audience || null, product_type: productType || null, is_active: isActive },
+        })
       } else if (product) {
         const { error: prodErr } = await supabase.from('products').update(payload).eq('id', product.id)
         if (prodErr) throw prodErr
@@ -459,6 +469,19 @@ function ProductModal({
           const { error: vErr } = await supabase.from('variants').insert(newVariants)
           if (vErr) throw vErr
         }
+        const before: Record<string, any> = {
+          name: product.name, slug: product.slug, is_active: product.is_active,
+          is_bestseller: product.is_bestseller, audience: product.audience, product_type: product.product_type,
+        }
+        const after: Record<string, any> = {
+          name, slug, is_active: isActive,
+          is_bestseller: isBestseller, audience: audience || null, product_type: productType || null,
+        }
+        await logAction({
+          userId: user?.id, userName: profile?.full_name ?? user?.email, userRole: profile?.role,
+          action: 'updated', entity: 'product', entityId: product.id, entityName: name,
+          changes: buildDiff(before, after),
+        })
       }
       onSaved(); onClose()
     } catch (e: any) {
@@ -695,7 +718,14 @@ export default function AdminProductsPage() {
   useEffect(() => { load() }, [page])
 
   async function handleDelete(product: Product) {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: profile } = await supabase
+      .from('users').select('full_name, role').eq('id', user?.id ?? '').single()
     await supabase.from('products').delete().eq('id', product.id)
+    await logAction({
+      userId: user?.id, userName: profile?.full_name ?? user?.email, userRole: profile?.role,
+      action: 'deleted', entity: 'product', entityId: product.id, entityName: product.name,
+    })
     setDeleteProduct(undefined)
     load()
   }

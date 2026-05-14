@@ -109,7 +109,7 @@ export default function AdminLogsPage() {
           <p className="text-sm text-brown/40 mt-1">{total.toLocaleString()} total entries</p>
         </div>
         <button
-          onClick={load}
+          onClick={() => { setPage(1); load() }}
           className="flex items-center gap-2 border border-whitewash-off text-brown/60 text-sm rounded-2xl px-4 py-2 hover:bg-white transition"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

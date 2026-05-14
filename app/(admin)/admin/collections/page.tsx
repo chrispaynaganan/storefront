@@ -4,6 +4,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
+import { logAction, buildDiff } from '@/lib/log-client'
 import { slugify } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
@@ -84,23 +85,46 @@ function CollectionModal({
     try {
       let imageUrl = collection?.image_url ?? null
       if (imageFile) {
-  const fd = new FormData()
-  fd.append('file', imageFile)
-  fd.append('slug', `collections/${slug}`)
-  const res = await fetch('/api/admin/upload', { method: 'POST', body: fd })
-  const json = await res.json()
-  if (!res.ok) throw new Error(json.error ?? 'Upload failed.')
-  imageUrl = json.url
-}
+        const fd = new FormData()
+        fd.append('file', imageFile)
+        fd.append('slug', `collections/${slug}`)
+        const res = await fetch('/api/admin/upload', { method: 'POST', body: fd })
+        const json = await res.json()
+        if (!res.ok) throw new Error(json.error ?? 'Upload failed.')
+        imageUrl = json.url
+      }
 
       const payload = { name, slug, description, sort_order: parseInt(sortOrder) || 0, is_active: isActive, image_url: imageUrl }
 
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: profile } = await supabase
+        .from('users').select('full_name, role').eq('id', user?.id ?? '').single()
+
       if (mode === 'add') {
-        const { error: e } = await supabase.from('collections').insert(payload)
+        const { data: newCol, error: e } = await supabase
+          .from('collections').insert(payload).select('id').single()
         if (e) throw e
+        await logAction({
+          userId: user?.id, userName: profile?.full_name ?? user?.email, userRole: profile?.role,
+          action: 'created', entity: 'collection', entityId: newCol?.id, entityName: name,
+          metadata: { slug, is_active: isActive },
+        })
       } else {
         const { error: e } = await supabase.from('collections').update(payload).eq('id', collection!.id)
         if (e) throw e
+        const before: Record<string, any> = {
+          name: collection!.name, slug: collection!.slug,
+          description: collection!.description, is_active: collection!.is_active,
+          sort_order: collection!.sort_order,
+        }
+        const after: Record<string, any> = {
+          name, slug, description, is_active: isActive, sort_order: parseInt(sortOrder) || 0,
+        }
+        await logAction({
+          userId: user?.id, userName: profile?.full_name ?? user?.email, userRole: profile?.role,
+          action: 'updated', entity: 'collection', entityId: collection!.id, entityName: name,
+          changes: buildDiff(before, after),
+        })
       }
       onSaved(); onClose()
     } catch (e: any) {
@@ -224,7 +248,14 @@ export default function AdminCollectionsPage() {
   useEffect(() => { load() }, [])
 
   async function handleDelete(c: Collection) {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: profile } = await supabase
+      .from('users').select('full_name, role').eq('id', user?.id ?? '').single()
     await supabase.from('collections').delete().eq('id', c.id)
+    await logAction({
+      userId: user?.id, userName: profile?.full_name ?? user?.email, userRole: profile?.role,
+      action: 'deleted', entity: 'collection', entityId: c.id, entityName: c.name,
+    })
     setDeleteItem(undefined)
     load()
   }

@@ -6,6 +6,7 @@ import { Suspense } from 'react'
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { logAction } from '@/lib/log-client'
 import Link from 'next/link'
 
 function LoginForm() {
@@ -36,9 +37,20 @@ function LoginForm() {
 
     const { data: profile } = await supabase
       .from('users')
-      .select('role')
+      .select('role, full_name')
       .eq('id', data.user.id)
       .single()
+
+    await logAction({
+      userId: data.user.id,
+      userName: profile?.full_name ?? data.user.email,
+      userRole: profile?.role ?? 'customer',
+      action: 'signed_in',
+      entity: 'auth',
+      entityId: data.user.id,
+      entityName: profile?.full_name ?? data.user.email ?? null,
+      metadata: { method: 'email' },
+    })
 
     router.push(profile?.role === 'admin' ? '/admin' : '/')
     router.refresh()

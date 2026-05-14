@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { logAction, buildDiff } from '@/lib/log-client'
 import { formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 
@@ -97,19 +98,41 @@ function PromoModal({ mode, promo, products, onClose, onSaved }: {
     try {
       const payload = {
         code: code.toUpperCase().trim(),
-        type,
-        value: parseFloat(value),
+        type, value: parseFloat(value),
         product_id: productId || null,
         starts_at: startsAt || null,
         ends_at: endsAt || null,
         is_active: isActive,
       }
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: profile } = await supabase
+        .from('users').select('full_name, role').eq('id', user?.id ?? '').single()
+
       if (mode === 'add') {
-        const { error: e } = await supabase.from('promos').insert(payload)
+        const { data: newPromo, error: e } = await supabase
+          .from('promos').insert(payload).select('id').single()
         if (e) throw e
+        await logAction({
+          userId: user?.id, userName: profile?.full_name ?? user?.email, userRole: profile?.role,
+          action: 'created', entity: 'promo', entityId: newPromo?.id, entityName: code.toUpperCase(),
+          metadata: { type, value: parseFloat(value), is_active: isActive },
+        })
       } else {
         const { error: e } = await supabase.from('promos').update(payload).eq('id', promo!.id)
         if (e) throw e
+        const before: Record<string, any> = {
+          code: promo!.code, type: promo!.type, value: promo!.value,
+          is_active: promo!.is_active, ends_at: promo!.ends_at,
+        }
+        const after: Record<string, any> = {
+          code: code.toUpperCase(), type, value: parseFloat(value),
+          is_active: isActive, ends_at: endsAt || null,
+        }
+        await logAction({
+          userId: user?.id, userName: profile?.full_name ?? user?.email, userRole: profile?.role,
+          action: 'updated', entity: 'promo', entityId: promo!.id, entityName: code.toUpperCase(),
+          changes: buildDiff(before, after),
+        })
       }
       onSaved(); onClose()
     } catch (e: any) {
@@ -221,7 +244,14 @@ export default function AdminPromosPage() {
   useEffect(() => { load() }, [])
 
   async function handleDelete(promo: Promo) {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: profile } = await supabase
+      .from('users').select('full_name, role').eq('id', user?.id ?? '').single()
     await supabase.from('promos').delete().eq('id', promo.id)
+    await logAction({
+      userId: user?.id, userName: profile?.full_name ?? user?.email, userRole: profile?.role,
+      action: 'deleted', entity: 'promo', entityId: promo.id, entityName: promo.code,
+    })
     setDeleteItem(undefined)
     load()
   }

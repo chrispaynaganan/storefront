@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import { logAction } from '@/lib/log-client'
 
 export default function AdminSignOutPage() {
   const router = useRouter()
@@ -25,6 +26,22 @@ export default function AdminSignOutPage() {
   async function handleSignOut() {
     setSigningOut(true)
     const supabase = createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: profile } = await supabase
+      .from('users')
+      .select('full_name, role')
+      .eq('id', user?.id ?? '')
+      .single()
+    await logAction({
+      userId: user?.id,
+      userName: profile?.full_name ?? user?.email,
+      userRole: profile?.role,
+      action: 'signed_out',
+      entity: 'auth',
+      entityId: user?.id,
+      entityName: profile?.full_name ?? user?.email ?? null,
+      metadata: { method: 'manual' },
+    })
     await supabase.auth.signOut()
     router.push('/login')
     router.refresh()

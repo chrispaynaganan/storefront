@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import { logAction } from '@/lib/log-client'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -69,7 +70,16 @@ function UpdateStatusModal({ order, onClose, onSaved }: { order: Order; onClose:
 
   async function handleSave() {
     setSaving(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: profile } = await supabase
+      .from('users').select('full_name, role').eq('id', user?.id ?? '').single()
     await supabase.from('orders').update({ status }).eq('id', order.id)
+    await logAction({
+      userId: user?.id, userName: profile?.full_name ?? user?.email, userRole: profile?.role,
+      action: 'updated', entity: 'order', entityId: order.id,
+      entityName: `Order ${order.id.slice(0, 8).toUpperCase()}`,
+      changes: { status: { from: order.status, to: status } },
+    })
     setSaving(false)
     onSaved(); onClose()
   }

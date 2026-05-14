@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
+import { logAction, buildDiff } from '@/lib/log-client'
 import { cn } from '@/lib/utils'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -140,7 +141,7 @@ function PostModal({
     if (mode === 'add') setSlug(slugify(title))
   }, [title, mode])
 
-  async function handleSave() {
+ async function handleSave() {
     if (!title || !slug) { setError('Title and slug are required.'); return }
     setSaving(true); setError('')
     try {
@@ -167,17 +168,70 @@ function PostModal({
         published_at: isPublished ? (post?.published_at ?? new Date().toISOString()) : null,
       }
 
+      // Get current user for logging
+      const { data: { user } } = await supabase.auth.getUser()
+      const { data: profile } = await supabase
+        .from('users')
+        .select('full_name, role')
+        .eq('id', user?.id ?? '')
+        .single()
+
       if (mode === 'add') {
-        const { error: e } = await supabase.from('journal_posts').insert(payload)
+        const { data: newPost, error: e } = await supabase
+          .from('journal_posts')
+          .insert(payload)
+          .select('id')
+          .single()
         if (e) throw e
+        await logAction({
+          userId: user?.id,
+          userName: profile?.full_name ?? user?.email,
+          userRole: profile?.role,
+          action: 'created',
+          entity: 'journal_post',
+          entityId: newPost?.id,
+          entityName: title,
+          changes: null,
+          metadata: { category: category || null, is_published: isPublished },
+        })
       } else {
-        const { error: e } = await supabase.from('journal_posts').update(payload).eq('id', post!.id)
+        const { error: e } = await supabase
+          .from('journal_posts')
+          .update(payload)
+          .eq('id', post!.id)
         if (e) throw e
+        const before: Record<string, any> = {
+          title: post!.title, slug: post!.slug, excerpt: post!.excerpt,
+          category: post!.category, is_published: post!.is_published,
+          cover_image_url: post!.cover_image_url,
+        }
+        const after: Record<string, any> = {
+          title, slug, excerpt: excerpt || null,
+          category: category || null, is_published: isPublished,
+          cover_image_url: coverUrl || null,
+        }
+        await logAction({
+          userId: user?.id,
+          userName: profile?.full_name ?? user?.email,
+          userRole: profile?.role,
+          action: 'updated',
+          entity: 'journal_post',
+          entityId: post!.id,
+          entityName: title,
+          changes: buildDiff(before, after),
+        })
       }
 
       onSaved(); onClose()
     } catch (e: any) {
-      setError(e.message ?? 'Something went wrong.')
+      const msg = e.message ?? ''
+      if (msg.includes('row-level security') || msg.includes('violates')) {
+        setError('You don\'t have permission to do this. Make sure you\'re logged in as an admin.')
+      } else if (msg.includes('duplicate') || msg.includes('unique')) {
+        setError('A post with this slug already exists. Try a different title or slug.')
+      } else {
+        setError(msg || 'Something went wrong. Please try again.')
+      }
     } finally {
       setSaving(false)
     }
@@ -319,13 +373,28 @@ export default function AdminJournalPage() {
   useEffect(() => { load() }, [])
 
   async function handleDelete(post: JournalPost) {
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: profile } = await supabase
+      .from('users').select('full_name, role').eq('id', user?.id ?? '').single()
     await supabase.from('journal_posts').delete().eq('id', post.id)
+    await logAction({
+      userId: user?.id,
+      userName: profile?.full_name ?? user?.email,
+      userRole: profile?.role,
+      action: 'deleted',
+      entity: 'journal_post',
+      entityId: post.id,
+      entityName: post.title,
+    })
     setDeletePost(undefined)
     load()
   }
 
   async function togglePublish(post: JournalPost) {
     const isPublished = !post.is_published
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: profile } = await supabase
+      .from('users').select('full_name, role').eq('id', user?.id ?? '').single()
     await supabase
       .from('journal_posts')
       .update({
@@ -333,6 +402,15 @@ export default function AdminJournalPage() {
         published_at: isPublished ? (post.published_at ?? new Date().toISOString()) : null,
       })
       .eq('id', post.id)
+    await logAction({
+      userId: user?.id,
+      userName: profile?.full_name ?? user?.email,
+      userRole: profile?.role,
+      action: isPublished ? 'published' : 'unpublished',
+      entity: 'journal_post',
+      entityId: post.id,
+      entityName: post.title,
+    })
     load()
   }
 
