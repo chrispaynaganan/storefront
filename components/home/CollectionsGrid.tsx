@@ -6,21 +6,21 @@ import { useRef, useState, useEffect } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 const CATEGORIES = [
-  { label: 'Shirts',  slug: 'shirts',  href: '/products?category=shirts',  fallbackDescription: 'Wear the message.' },
-  { label: 'Hoodies', slug: 'hoodies', href: '/products?category=hoodies', fallbackDescription: 'Covered in faith.' },
-  { label: 'Sports',  slug: 'sports',  href: '/sports',                     fallbackDescription: 'Move by faith.' },
-  { label: 'Women',   slug: 'women',   href: '/women',                      fallbackDescription: 'Dress with intention.' },
-  { label: 'Men',     slug: 'men',     href: '/men',                        fallbackDescription: 'Built for everyday.' },
-  { label: 'Kids',    slug: 'kids',    href: '/kids',                       fallbackDescription: 'Small fits, big heart.' },
+  { label: 'Women',        slug: 'women',        href: '/women',        fallbackDescription: 'Dress with intention.' },
+  { label: 'Men',          slug: 'men',          href: '/men',          fallbackDescription: 'Built for everyday.' },
+  { label: 'Kids',         slug: 'kids',         href: '/kids',         fallbackDescription: 'Small fits, big heart.' },
+  { label: 'Sports',       slug: 'sports',       href: '/sports',       fallbackDescription: 'Move by faith.' },
+  { label: 'New Arrivals', slug: 'new-arrivals', href: '/new-arrivals', fallbackDescription: 'Just dropped.' },
+  { label: 'Best Sellers', slug: 'best-sellers', href: '/best-sellers', fallbackDescription: 'Most loved.' },
 ]
 
 const FALLBACK_GRADIENTS: Record<string, string> = {
-  shirts:  'linear-gradient(160deg, #FFCBA4 0%, #E8A882 100%)',
-  hoodies: 'linear-gradient(160deg, #6B3A22 0%, #3B1F0E 100%)',
-  sports:  'linear-gradient(160deg, #3B1F0E 0%, #6B3A22 100%)',
-  women:   'linear-gradient(160deg, #FFE8D6 0%, #FFCBA4 100%)',
-  men:     'linear-gradient(160deg, #6B3A22 0%, #3B1F0E 100%)',
-  kids:    'linear-gradient(160deg, #FFCBA4 0%, #FFE8D6 100%)',
+  women:          'linear-gradient(160deg, #FFE8D6 0%, #FFCBA4 100%)',
+  men:            'linear-gradient(160deg, #6B3A22 0%, #3B1F0E 100%)',
+  kids:           'linear-gradient(160deg, #FFCBA4 0%, #FFE8D6 100%)',
+  sports:         'linear-gradient(160deg, #3B1F0E 0%, #6B3A22 100%)',
+  'new-arrivals': 'linear-gradient(160deg, #FFCBA4 0%, #E8A882 100%)',
+  'best-sellers': 'linear-gradient(160deg, #3B1F0E 0%, #6B3A22 100%)',
 }
 
 interface Collection {
@@ -96,71 +96,68 @@ export function CollectionsGrid({ collections }: Props) {
         </div>
       </div>
 
-      {/* Scrollable track — left padding only so last card bleeds off right */}
+      {/* Scrollable track */}
       <div className="px-4 sm:px-6 lg:px-8 overflow-hidden">
         <div
           ref={trackRef}
           className="flex gap-4 overflow-x-auto scrollbar-hide"
           style={{ scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}
         >
-        <div className="flex-none w-4 sm:w-6 lg:w-8" aria-hidden="true" />
-        {CATEGORIES.map(({ label, slug, href, fallbackDescription }, i) => {
-          const collection = bySlug[slug]
-          const imageUrl = collection?.image_url ?? null
-          const description = collection?.description ?? fallbackDescription
+          <div className="flex-none w-4 sm:w-6 lg:w-8" aria-hidden="true" />
 
-          return (
-            <Link
-              key={slug}
-              href={href}
-              data-card
-              className="group flex-none flex flex-col"
-              style={{
-                width: 'clamp(290px, 42vw, 460px)',
-                scrollSnapAlign: 'start',
-              }}
-            >
-              {/* Image card with border radius always intact */}
-              <div
-                className="relative w-full overflow-hidden bg-whitewash-off"
+          {CATEGORIES.map(({ label, slug, href, fallbackDescription }, i) => {
+            const collection = bySlug[slug]
+            const imageUrl = collection?.image_url ?? null
+            const description = collection?.description ?? fallbackDescription
+
+            return (
+              <Link
+                key={slug}
+                href={href}
+                data-card
+                className="group flex-none flex flex-col"
                 style={{
-                  aspectRatio: '3/4',
-                  borderRadius: '1rem',
+                  width: 'clamp(200px, 72vw, 420px)',
+                  scrollSnapAlign: 'start',
                 }}
               >
-                {imageUrl ? (
-                  <Image
-                    src={imageUrl}
-                    alt={label}
-                    fill
-                    sizes="(max-width: 640px) 60vw, (max-width: 1024px) 40vw, 300px"
-                    priority={i < 2}
-                    className="object-cover transition-transform duration-700 group-hover:scale-105"
-                    style={{ borderRadius: '1rem' }}
-                  />
-                ) : (
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      background: FALLBACK_GRADIENTS[slug],
-                      borderRadius: '1rem',
-                    }}
-                  />
-                )}
-              </div>
+                {/* Image card */}
+                <div
+                  className="relative w-full overflow-hidden bg-whitewash-off"
+                  style={{ aspectRatio: '3/4', borderRadius: '1rem' }}
+                >
+                  {imageUrl ? (
+                    <Image
+                      src={imageUrl}
+                      alt={label}
+                      fill
+                      sizes="(max-width: 640px) 72vw, (max-width: 1024px) 40vw, 420px"
+                      priority={i < 2}
+                      className="object-cover transition-transform duration-700 group-hover:scale-105"
+                      style={{ borderRadius: '1rem' }}
+                    />
+                  ) : (
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        background: FALLBACK_GRADIENTS[slug],
+                        borderRadius: '1rem',
+                      }}
+                    />
+                  )}
+                </div>
 
-              {/* Label + tagline */}
-              <div className="mt-3">
-                <p className="text-lg font-medium text-brown leading-tight">{label}</p>
-                <p className="text-sm mt-0.5" style={{ color: '#3B1F0E99' }}>{description}</p>
-              </div>
-            </Link>
-          )
-        })}
+                {/* Label + tagline */}
+                <div className="mt-3">
+                  <p className="text-lg font-medium text-brown leading-tight">{label}</p>
+                  <p className="text-sm mt-0.5" style={{ color: '#3B1F0E99' }}>{description}</p>
+                </div>
+              </Link>
+            )
+          })}
 
-        {/* Right breathing room so last card isn't fully flush to viewport edge */}
-        <div className="flex-none w-4 sm:w-6 lg:w-8" aria-hidden="true" />
-      </div>
+          <div className="flex-none w-4 sm:w-6 lg:w-8" aria-hidden="true" />
+        </div>
       </div>
 
     </section>

@@ -5,7 +5,7 @@ export function FavoritesIcon() {
   return (
     <Link
       href="/favorites"
-      className="flex flex-col items-center gap-0.5 text-[#3B1F0E] hover:opacity-70 transition-opacity"
+      className="flex flex-col items-center gap-0.5 text-brown hover:opacity-70 transition-opacity"
       aria-label="Favorites"
     >
       <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">

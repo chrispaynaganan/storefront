@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/Input'
 import { PayPalButton } from './PayPalButton'
+import { PromoCodeInput } from '@/components/cart/PromoCodeInput'
 import { createClient } from '@/lib/supabase'
 import { formatPrice } from '@/lib/utils'
 import { useCart } from '@/context/CartContext'
@@ -22,7 +23,11 @@ export function CheckoutClient({ cartItems, subtotal, userId }: Props) {
     province: '', country: 'Philippines', postal_code: '', phone: '',
   })
   const [formReady, setFormReady] = useState(false)
+  const [discount, setDiscount] = useState(0)
+  const [promoCode, setPromoCode] = useState('')
   const [error, setError] = useState('')
+
+  const total = Math.max(0, subtotal - discount)
 
   function updateForm(field: string, value: string) {
     const updated = { ...form, [field]: value }
@@ -31,10 +36,14 @@ export function CheckoutClient({ cartItems, subtotal, userId }: Props) {
     setFormReady(required.every(k => updated[k as keyof typeof updated].trim()))
   }
 
+  function handlePromoApply(amount: number, code: string) {
+    setDiscount(amount)
+    setPromoCode(code)
+  }
+
   async function handlePaymentSuccess(paypalOrderId: string) {
     const supabase = createClient()
 
-    // Save address
     const { data: address } = await supabase
       .from('addresses')
       .insert({ user_id: userId, ...form, is_default: false })
@@ -43,7 +52,6 @@ export function CheckoutClient({ cartItems, subtotal, userId }: Props) {
 
     if (!address) { setError('Failed to save address'); return }
 
-    // Create order
     const { data: order } = await supabase
       .from('orders')
       .insert({
@@ -51,8 +59,8 @@ export function CheckoutClient({ cartItems, subtotal, userId }: Props) {
         address_id: address.id,
         status: 'paid',
         subtotal,
-        discount: 0,
-        total: subtotal,
+        discount,
+        total,
         currency: 'PHP',
         paypal_order_id: paypalOrderId,
       })
@@ -61,7 +69,6 @@ export function CheckoutClient({ cartItems, subtotal, userId }: Props) {
 
     if (!order) { setError('Failed to create order'); return }
 
-    // Save order items
     await supabase.from('order_items').insert(
       cartItems.map(item => ({
         order_id: order.id,
@@ -72,7 +79,6 @@ export function CheckoutClient({ cartItems, subtotal, userId }: Props) {
       }))
     )
 
-    // Decrement stock for each variant
     for (const item of cartItems) {
       await supabase.rpc('decrement_stock', {
         p_variant_id: item.variant_id,
@@ -80,7 +86,6 @@ export function CheckoutClient({ cartItems, subtotal, userId }: Props) {
       })
     }
 
-    // Clear cart
     await supabase.from('cart_items').delete().eq('user_id', userId)
     await refreshCart()
 
@@ -116,7 +121,7 @@ export function CheckoutClient({ cartItems, subtotal, userId }: Props) {
             <div className="space-y-3 mb-4">
               {cartItems.map(item => (
                 <div key={item.id} className="flex items-center gap-3">
-                  <div className="relative w-12 h-12 bg-whitewash-off rounded-lg overflow-hiddenshrink-0">
+                  <div className="relative w-12 h-12 bg-whitewash-off rounded-lg overflow-hidden shrink-0">
                     {item.variant?.product?.image_urls?.[0] && (
                       <Image src={item.variant.product.image_urls[0]} alt="" fill className="object-cover" />
                     )}
@@ -129,9 +134,28 @@ export function CheckoutClient({ cartItems, subtotal, userId }: Props) {
                 </div>
               ))}
             </div>
-            <div className="border-t border-peach-light pt-3 flex justify-between font-medium text-brown">
-              <span>Total</span>
-              <span>{formatPrice(subtotal)}</span>
+
+            {/* Promo code */}
+            <div className="border-t border-peach-light pt-4 mb-4">
+              <PromoCodeInput onApply={handlePromoApply} subtotal={subtotal} />
+            </div>
+
+            {/* Totals */}
+            <div className="space-y-2 border-t border-peach-light pt-3">
+              <div className="flex justify-between text-sm text-brown/60">
+                <span>Subtotal</span>
+                <span>{formatPrice(subtotal)}</span>
+              </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-sm text-green-600">
+                  <span>Discount {promoCode && `(${promoCode})`}</span>
+                  <span>− {formatPrice(discount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-semibold text-brown text-base pt-1">
+                <span>Total</span>
+                <span>{formatPrice(total)}</span>
+              </div>
             </div>
           </div>
 
@@ -142,7 +166,7 @@ export function CheckoutClient({ cartItems, subtotal, userId }: Props) {
                 Fill in your shipping details to continue
               </p>
             ) : (
-              <PayPalButton amount={subtotal} onSuccess={handlePaymentSuccess} />
+              <PayPalButton amount={total} onSuccess={handlePaymentSuccess} />
             )}
             {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
           </div>

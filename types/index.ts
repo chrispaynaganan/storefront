@@ -42,6 +42,8 @@ export interface Product {
   image_urls: string[]
   is_bestseller: boolean
   is_active: boolean
+  audience: string | null
+  product_type: string | null
   created_at: string
   collection?: Collection
   variants?: Variant[]
