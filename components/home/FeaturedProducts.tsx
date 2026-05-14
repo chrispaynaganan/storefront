@@ -16,7 +16,7 @@ export function FeaturedProducts({ products }: Props) {
           <p className="text-xs tracking-[0.2em] uppercase text-brown-light mb-1 font-medium">Just Dropped</p>
           <h2 className="text-2xl font-light text-brown tracking-tight">New Arrivals</h2>
         </div>
-        <Link href="/new" className="text-sm text-brown-light hover:text-brown transition-colors">
+        <Link href="/new-arrivals" className="text-sm text-brown-light hover:text-brown transition-colors">
           View all new
         </Link>
       </div>

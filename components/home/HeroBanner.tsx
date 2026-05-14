@@ -92,7 +92,7 @@ export function HeroBanner() {
           {/* CTAs */}
           <div ref={ctaRef} className="flex flex-wrap gap-3">
             <Link
-              href="/products"
+              href="/shop"
               className="inline-flex items-center gap-2 bg-brown text-whitewash px-7 py-3.5 rounded-full text-sm font-medium hover:bg-brown-light transition-colors duration-200"
             >
               Shop Now
@@ -101,7 +101,7 @@ export function HeroBanner() {
               </svg>
             </Link>
             <Link
-              href="/new"
+              href="/new-arrivals"
               className="inline-flex items-center gap-2 border border-brown text-brown px-7 py-3.5 rounded-full text-sm font-medium hover:bg-brown hover:text-whitewash transition-colors duration-200"
             >
               New Arrivals

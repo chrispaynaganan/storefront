@@ -17,7 +17,7 @@ export function BestsellerStrip({ products }: Props) {
             <p className="text-xs tracking-[0.2em] uppercase text-brown-light mb-1 font-medium">Fan Favourites</p>
             <h2 className="text-2xl font-light text-brown tracking-tight">Bestsellers</h2>
           </div>
-          <Link href="/products?sort=bestseller" className="text-sm text-brown-light hover:text-brown transition-colors">
+          <Link href="/best-sellers" className="text-sm text-brown-light hover:text-brown transition-colors">
             See all
           </Link>
         </div>

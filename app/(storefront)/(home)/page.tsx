@@ -28,7 +28,6 @@ export default async function HomePage() {
       .eq('is_bestseller', true)
       .limit(4),
 
-    // New arrivals — last 14 days
     supabase
       .from('products')
       .select('*, variants(*)')
@@ -37,7 +36,6 @@ export default async function HomePage() {
       .order('created_at', { ascending: false })
       .limit(8),
 
-    // Sale check — at least one variant with compare_at_price set
     supabase
       .from('variants')
       .select('id')
@@ -51,9 +49,9 @@ export default async function HomePage() {
     <>
       <SaleBanner isActive={hasSale} />
       <HeroBanner />
+      <FeaturedProducts products={featured ?? []} />
       <CollectionsGrid collections={collections ?? []} />
       <BestsellerStrip products={bestsellers ?? []} />
-      <FeaturedProducts products={featured ?? []} />
       <BrandStatement />
     </>
   )
