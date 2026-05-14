@@ -13,10 +13,10 @@ export default async function CartPage() {
   if (!user) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-        <h1 className="text-3xl font-light text-[#3B1F0E] mb-4">Your cart</h1>
-        <p className="text-[#6B3A22] mb-6">Sign in to view your cart</p>
+        <h1 className="text-3xl font-light text-brown mb-4">Your cart</h1>
+        <p className="text-brown-light mb-6">Sign in to view your cart</p>
         <Link href="/login">
-          <Button className="bg-[#3B1F0E] text-white hover:bg-[#6B3A22] px-8 py-3 rounded-lg">
+          <Button className="bg-brown text-white hover:bg-brown-light px-8 py-3 rounded-lg">
             Sign in
           </Button>
         </Link>

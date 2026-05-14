@@ -7,11 +7,16 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 
-export function CartPageClient({ cartItems }: { cartItems: any[] }) {
+export function CartPageClient({ cartItems: initialItems }: { cartItems: any[] }) {
+  const [items, setItems] = useState(initialItems)
   const [discount, setDiscount] = useState(0)
   const [promoCode, setPromoCode] = useState('')
 
-  const subtotal = cartItems.reduce((sum, item) =>
+  function handleRemove(id: string) {
+    setItems(prev => prev.filter(i => i.id !== id))
+  }
+
+  const subtotal = items.reduce((sum, item) =>
     sum + (item.variant?.price ?? 0) * item.qty, 0)
 
   function handlePromoApply(amount: number, code: string) {
@@ -19,7 +24,7 @@ export function CartPageClient({ cartItems }: { cartItems: any[] }) {
     setPromoCode(code)
   }
 
-  if (!cartItems.length) {
+  if (!items.length) {
     return (
       <div className="max-w-5xl mx-auto px-4 py-10">
         <h1 className="text-3xl font-light text-brown mb-8">Your cart</h1>
@@ -40,12 +45,12 @@ export function CartPageClient({ cartItems }: { cartItems: any[] }) {
   return (
     <div className="max-w-5xl mx-auto px-4 py-10">
       <h1 className="text-3xl font-light text-brown mb-8">
-        Your cart ({cartItems.length})
+        Your cart ({items.length})
       </h1>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
         <div className="lg:col-span-2">
-          {cartItems.map(item => (
-            <CartItem key={item.id} item={item} />
+          {items.map(item => (
+            <CartItem key={item.id} item={item} onRemove={handleRemove} />
           ))}
         </div>
         <div className="space-y-4">

@@ -6,7 +6,7 @@ import { formatPrice } from '@/lib/utils'
 import { useCart } from '@/context/CartContext'
 import type { CartItem as CartItemType } from '@/types'
 
-export function CartItem({ item }: { item: CartItemType }) {
+export function CartItem({ item, onRemove }: { item: CartItemType; onRemove?: (id: string) => void }) {
   const product = item.variant?.product
   const variant = item.variant
   const [qty, setQty] = useState(item.qty)
@@ -28,6 +28,7 @@ export function CartItem({ item }: { item: CartItemType }) {
     const supabase = createClient()
     await supabase.from('cart_items').delete().eq('id', item.id)
     await refreshCart()
+    onRemove?.(item.id)
     setLoading(false)
   }
 
