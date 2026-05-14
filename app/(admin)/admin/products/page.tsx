@@ -432,14 +432,15 @@ function ProductModal({
     setSaving(true); setError('')
     try {
       let imageUrls: string[] = product?.image_urls ?? []
-      for (const file of imageFiles) {
-        const ext = file.name.split('.').pop()
-        const path = `${slug}-${Date.now()}.${ext}`
-        const { error: upErr } = await supabase.storage.from('products').upload(path, file)
-        if (upErr) throw upErr
-        const { data: urlData } = supabase.storage.from('products').getPublicUrl(path)
-        imageUrls = [...imageUrls, urlData.publicUrl]
-      }
+     for (const file of imageFiles) {
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('slug', slug)
+  const res = await fetch('/api/admin/upload', { method: 'POST', body: fd })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.error ?? 'Upload failed.')
+  imageUrls = [...imageUrls, json.url]
+}
 
       if (mode === 'add') {
         const { data: prod, error: prodErr } = await supabase
@@ -541,7 +542,7 @@ function ProductModal({
                     <p className="hidden sm:block text-sm text-brown/60">
                       Drag images here or <span className="underline font-medium">browse</span>
                     </p>
-                    <p className="text-xs text-brown/30 mt-1">WEBP files up to 5MB</p>
+                    <p className="text-xs text-brown/30 mt-1">JPG, PNG, WEBP up to 5MB — auto-converted to WEBP</p>
                   </div>
                   <input ref={fileRef} type="file" accept="image/webp" multiple className="hidden" onChange={e => setImageFiles(Array.from(e.target.files ?? []))} />
                   {imageFiles.length > 0 && (

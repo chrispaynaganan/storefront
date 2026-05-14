@@ -84,13 +84,14 @@ function CollectionModal({
     try {
       let imageUrl = collection?.image_url ?? null
       if (imageFile) {
-        const ext = imageFile.name.split('.').pop()
-        const path = `collections/${slug}-${Date.now()}.${ext}`
-        const { error: upErr } = await supabase.storage.from('products').upload(path, imageFile)
-        if (upErr) throw upErr
-        const { data } = supabase.storage.from('products').getPublicUrl(path)
-        imageUrl = data.publicUrl
-      }
+  const fd = new FormData()
+  fd.append('file', imageFile)
+  fd.append('slug', `collections/${slug}`)
+  const res = await fetch('/api/admin/upload', { method: 'POST', body: fd })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.error ?? 'Upload failed.')
+  imageUrl = json.url
+}
 
       const payload = { name, slug, description, sort_order: parseInt(sortOrder) || 0, is_active: isActive, image_url: imageUrl }
 
@@ -130,9 +131,9 @@ function CollectionModal({
             <div onClick={() => fileRef.current?.click()} className="border-2 border-dashed border-gray-200 rounded-2xl p-6 text-center cursor-pointer hover:border-peach transition">
               <p className="sm:hidden text-sm text-brown/60">Tap to add image</p>
               <p className="hidden sm:block text-sm text-brown/60">Drag image here or <span className="underline font-medium">browse</span></p>
-              <p className="text-xs text-brown/30 mt-1">WEBP files up to 5MB</p>
+              <p className="text-xs text-brown/30 mt-1">JPG, PNG, WEBP up to 5MB — auto-converted to WEBP</p>
             </div>
-            <input ref={fileRef} type="file" accept="image/webp" className="hidden" onChange={e => setImageFile(e.target.files?.[0] ?? null)} />
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={e => setImageFile(e.target.files?.[0] ?? null)} />
             {imageFile && <p className="text-xs text-brown/50">{imageFile.name}</p>}
             {collection?.image_url && !imageFile && (
               <img src={collection.image_url} alt="" className="w-20 h-20 rounded-xl object-cover border border-whitewash-off" />
