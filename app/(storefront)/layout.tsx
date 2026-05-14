@@ -7,10 +7,10 @@ import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 export default async function StorefrontLayout({ children }: { children: React.ReactNode }) {
   const user = await getUser()
+  const supabase = await createServerSupabaseClient()
 
   let cartCount = 0
   if (user) {
-    const supabase = await createServerSupabaseClient()
     const { count } = await supabase
       .from('cart_items')
       .select('*', { count: 'exact', head: true })
@@ -18,11 +18,19 @@ export default async function StorefrontLayout({ children }: { children: React.R
     cartCount = count ?? 0
   }
 
+  const { data: saleVariants } = await supabase
+    .from('variants')
+    .select('id')
+    .not('compare_at_price', 'is', null)
+    .limit(1)
+
+  const hasSale = (saleVariants?.length ?? 0) > 0
+
   return (
     <ToastProvider>
       <CartProvider initialCount={cartCount}>
         <div className="flex flex-col min-h-screen">
-          <Navbar user={user} />
+          <Navbar user={user} hasSale={hasSale} />
           <main className="flex-1">{children}</main>
           <Footer />
         </div>

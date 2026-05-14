@@ -1,20 +1,14 @@
-import { CategoryPage } from '@/components/category/CategoryPage'
+import { AudienceLandingPage } from '@/components/category/AudienceLandingPage'
 
-export const metadata = { title: 'Kids — Known & Worn' }
+export const metadata = { title: "Kids' — Known & Worn" }
 
-interface Props {
-  searchParams: Promise<{ sizes?: string; in_stock?: string; sort?: string }>
-}
-
-export default async function KidsPage({ searchParams }: Props) {
+export default function KidsPage() {
   return (
-    <CategoryPage
-      config={{
-        slug: 'kids',
-        label: 'Kids',
-        description: 'Soft, durable styles built for little ones.',
-      }}
-      searchParams={await searchParams}
-    />
+    <AudienceLandingPage config={{
+      audience: 'kids',
+      label: 'Kids',
+      tagline: 'Small fits, big heart',
+      description: 'The same quality, sized for the little ones. Soft, durable, and made to move.',
+    }} />
   )
 }

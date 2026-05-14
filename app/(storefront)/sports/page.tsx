@@ -1,20 +1,14 @@
-import { CategoryPage } from '@/components/category/CategoryPage'
+import { AudienceLandingPage } from '@/components/category/AudienceLandingPage'
 
 export const metadata = { title: 'Sports — Known & Worn' }
 
-interface Props {
-  searchParams: Promise<{ sizes?: string; in_stock?: string; sort?: string }>
-}
-
-export default async function SportsPage({ searchParams }: Props) {
+export default function SportsPage() {
   return (
-    <CategoryPage
-      config={{
-        slug: 'sports',
-        label: 'Sports',
-        description: 'Performance-ready pieces for an active lifestyle.',
-      }}
-      searchParams={await searchParams}
-    />
+    <AudienceLandingPage config={{
+      audience: 'sports',
+      label: 'Sports',
+      tagline: 'Move by faith',
+      description: 'Performance-ready pieces that carry the message. Built for movement, worn with intention.',
+    }} />
   )
 }

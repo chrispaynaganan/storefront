@@ -1,20 +1,14 @@
-import { CategoryPage } from '@/components/category/CategoryPage'
+import { AudienceLandingPage } from '@/components/category/AudienceLandingPage'
 
-export const metadata = { title: 'Women — Known & Worn' }
+export const metadata = { title: "Women's — Known & Worn" }
 
-interface Props {
-  searchParams: Promise<{ sizes?: string; in_stock?: string; sort?: string }>
-}
-
-export default async function WomenPage({ searchParams }: Props) {
+export default function WomenPage() {
   return (
-    <CategoryPage
-      config={{
-        slug: 'women',
-        label: 'Women',
-        description: 'Everyday essentials designed for her.',
-      }}
-      searchParams={await searchParams}
-    />
+    <AudienceLandingPage config={{
+      audience: 'women',
+      label: 'Women',
+      tagline: 'Made for her',
+      description: 'Everyday essentials designed for her. Clean fits, premium fabrics, built to last.',
+    }} />
   )
 }

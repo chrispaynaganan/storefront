@@ -1,20 +1,14 @@
-import { CategoryPage } from '@/components/category/CategoryPage'
+import { AudienceLandingPage } from '@/components/category/AudienceLandingPage'
 
-export const metadata = { title: 'Men — Known & Worn' }
+export const metadata = { title: "Men's — Known & Worn" }
 
-interface Props {
-  searchParams: Promise<{ sizes?: string; in_stock?: string; sort?: string }>
-}
-
-export default async function MenPage({ searchParams }: Props) {
+export default function MenPage() {
   return (
-    <CategoryPage
-      config={{
-        slug: 'men',
-        label: 'Men',
-        description: 'Clean cuts and comfortable fits for him.',
-      }}
-      searchParams={await searchParams}
-    />
+    <AudienceLandingPage config={{
+      audience: 'men',
+      label: 'Men',
+      tagline: 'Built for everyday',
+      description: 'Clean, minimal pieces built for everyday wear. Heavyweight fabrics, honest fits.',
+    }} />
   )
 }

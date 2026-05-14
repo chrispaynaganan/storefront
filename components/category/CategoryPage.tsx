@@ -1,15 +1,19 @@
 import { Suspense } from 'react'
 import Image from 'next/image'
-import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { ProductGrid } from '@/components/products/ProductGrid'
 import { ProductFilters } from '@/components/products/ProductFilters'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getFavoritedProductIds } from '@/lib/favorites'
 
 interface CategoryConfig {
-  slug: string
+  slug?: string
   label: string
   description: string
+  audience?: string
+  productType?: string
+  backLink?: { label: string; href: string }
+  shopLink?: string
 }
 
 interface SearchParams {
@@ -28,48 +32,59 @@ export async function CategoryPage({
   const { sizes, in_stock, sort } = searchParams
   const supabase = await createServerSupabaseClient()
 
-  // Look up the collection by slug
-  const { data: collection } = await supabase
-    .from('collections')
-    .select('*')
-    .eq('slug', config.slug)
-    .eq('is_active', true)
-    .single()
-
-  // Not found is non-fatal for category pages — we show empty grid, not 404
-  // (collection may not be seeded yet)
-
   let query = supabase
     .from('products')
     .select('*, variants(*)')
     .eq('is_active', true)
 
-  if (collection) {
-    query = query.eq('collection_id', collection.id)
-  } else {
-    // No collection seeded yet — return nothing gracefully
-    query = query.eq('id', '00000000-0000-0000-0000-000000000000')
+  // Filter by audience (women/men/kids/sports)
+  if (config.audience) {
+    query = query.eq('audience', config.audience)
+  }
+
+  // Filter by product type (shirts/hoodies/etc)
+  if (config.productType) {
+    query = query.eq('product_type', config.productType)
+  }
+
+  // Fall back to collection slug if no audience/productType
+  if (!config.audience && !config.productType && config.slug) {
+    const { data: collection } = await supabase
+      .from('collections')
+      .select('id')
+      .eq('slug', config.slug)
+      .eq('is_active', true)
+      .single()
+
+    if (collection) {
+      query = query.eq('collection_id', collection.id)
+    } else {
+      query = query.eq('id', '00000000-0000-0000-0000-000000000000')
+    }
   }
 
   if (sizes) {
     const sizeList = sizes.split(',').filter(Boolean)
     if (sizeList.length > 0) query = query.in('variants.size', sizeList)
   }
-
   if (in_stock === 'true') query = query.gt('variants.stock_qty', 0)
-
-  if (sort === 'price_asc') {
-    query = query.order('variants(price)', { ascending: true })
-  } else if (sort === 'price_desc') {
-    query = query.order('variants(price)', { ascending: false })
-  } else {
-    query = query.order('created_at', { ascending: false })
-  }
+  if (sort === 'price_asc') query = query.order('variants(price)', { ascending: true })
+  else if (sort === 'price_desc') query = query.order('variants(price)', { ascending: false })
+  else query = query.order('created_at', { ascending: false })
 
   const { data: products } = await query
   const favoritedIds = await getFavoritedProductIds()
 
-  const heroImage = collection?.image_url ?? null
+  // Fetch hero image from collection if slug provided
+  let heroImage: string | null = null
+  if (config.slug) {
+    const { data: collection } = await supabase
+      .from('collections')
+      .select('image_url')
+      .eq('slug', config.slug)
+      .single()
+    heroImage = collection?.image_url ?? null
+  }
 
   return (
     <div>
@@ -78,7 +93,6 @@ export async function CategoryPage({
         className="relative w-full overflow-hidden flex items-end"
         style={{ minHeight: 'clamp(260px, 35vw, 420px)' }}
       >
-        {/* Background */}
         {heroImage ? (
           <Image
             src={heroImage}
@@ -91,12 +105,21 @@ export async function CategoryPage({
         ) : (
           <div className="absolute inset-0 bg-whitewash-off" />
         )}
-
-        {/* Overlay */}
         <div className="absolute inset-0 bg-linear-to-t from-brown/60 via-brown/10 to-transparent" />
-
-        {/* Text */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 w-full">
+          {/* Breadcrumb */}
+          {config.backLink && (
+            <div className="flex items-center gap-2 mb-3">
+              <Link
+                href={config.backLink.href}
+                className="text-whitewash/60 text-xs hover:text-whitewash transition-colors"
+              >
+                {config.backLink.label}
+              </Link>
+              <span className="text-whitewash/40 text-xs">→</span>
+              <span className="text-whitewash/80 text-xs">{config.label}</span>
+            </div>
+          )}
           <h1
             className="font-sans font-light text-whitewash leading-tight"
             style={{ fontSize: 'clamp(2rem, 5vw, 3.5rem)', letterSpacing: '-0.02em' }}
@@ -106,8 +129,28 @@ export async function CategoryPage({
           <p className="text-whitewash/70 text-sm sm:text-base mt-2 max-w-md font-light">
             {config.description}
           </p>
+          {config.shopLink && (
+            <Link
+              href={config.shopLink}
+              className="inline-block mt-5 bg-whitewash text-brown text-sm font-medium rounded-full px-6 py-2.5 hover:bg-peach-light transition-colors"
+            >
+              Shop All →
+            </Link>
+          )}
         </div>
       </div>
+
+      {/* Back link for product type pages */}
+      {config.backLink && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+          <Link
+            href={config.backLink.href}
+            className="text-sm text-brown/50 hover:text-brown transition-colors"
+          >
+            ← {config.backLink.label}
+          </Link>
+        </div>
+      )}
 
       {/* Products */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
