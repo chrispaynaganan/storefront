@@ -1,20 +1,17 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import Link from 'next/link'
+import { createServerSupabaseClient } from '@/lib/supabase-server'
 
 export const metadata: Metadata = { title: 'Lookbook — Known & Worn' }
 
-// Replace these placeholder images with real lookbook photography
-const LOOKBOOK_IMAGES = [
-  { id: 1, alt: 'Lookbook image 1 — replace with real photo', aspectRatio: '3/4' },
-  { id: 2, alt: 'Lookbook image 2 — replace with real photo', aspectRatio: '3/4' },
-  { id: 3, alt: 'Lookbook image 3 — replace with real photo', aspectRatio: '4/3' },
-  { id: 4, alt: 'Lookbook image 4 — replace with real photo', aspectRatio: '3/4' },
-  { id: 5, alt: 'Lookbook image 5 — replace with real photo', aspectRatio: '3/4' },
-  { id: 6, alt: 'Lookbook image 6 — replace with real photo', aspectRatio: '4/3' },
-]
+export default async function LookbookPage() {
+  const supabase = await createServerSupabaseClient()
+  const { data: photos } = await supabase
+    .from('lookbook_photos')
+    .select('id, image_url, title, caption')
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
 
-export default function LookbookPage() {
   return (
     <div>
       {/* Hero */}
@@ -35,24 +32,31 @@ export default function LookbookPage() {
         </div>
       </div>
 
-      {/* Image grid — replace bg-whitewash-off placeholders with real Image components */}
+      {/* Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
-          {LOOKBOOK_IMAGES.map(({ id, alt, aspectRatio }) => (
-            <div
-              key={id}
-              className="break-inside-avoid bg-whitewash-off rounded-2xl overflow-hidden"
-              style={{ aspectRatio }}
-            >
-              {/* TODO: Replace with real image
-              <Image src="/lookbook/image-1.jpg" alt={alt} fill className="object-cover" />
-              */}
-              <div className="w-full h-full flex items-center justify-center p-6 min-h-50">
-                <p className="text-xs text-brown/30 text-center leading-relaxed">{alt}</p>
+        {!photos || photos.length === 0 ? (
+          <div className="text-center py-24 text-brown/30 text-sm">
+            Coming soon — check back shortly.
+          </div>
+        ) : (
+          <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 space-y-4">
+            {photos.map(photo => (
+              <div key={photo.id} className="break-inside-avoid rounded-2xl overflow-hidden bg-whitewash-off">
+                <img
+                  src={photo.image_url}
+                  alt={photo.title ?? 'Lookbook photo'}
+                  className="w-full object-cover"
+                />
+                {(photo.title || photo.caption) && (
+                  <div className="px-4 py-3">
+                    {photo.title && <p className="text-sm font-semibold text-brown">{photo.title}</p>}
+                    {photo.caption && <p className="text-xs text-brown/50 mt-0.5">{photo.caption}</p>}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* CTA */}
