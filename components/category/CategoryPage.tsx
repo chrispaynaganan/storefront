@@ -14,6 +14,10 @@ interface CategoryConfig {
   productType?: string
   backLink?: { label: string; href: string }
   shopLink?: string
+  emptyMessage?: string
+  emptySubmessage?: string
+  emptyHref?: string
+  emptyActionLabel?: string
 }
 
 interface SearchParams {
@@ -25,9 +29,11 @@ interface SearchParams {
 export async function CategoryPage({
   config,
   searchParams,
+  newArrivalsOnly = false,
 }: {
   config: CategoryConfig
   searchParams: SearchParams
+  newArrivalsOnly?: boolean
 }) {
   const { sizes, in_stock, sort } = searchParams
   const supabase = await createServerSupabaseClient()
@@ -37,17 +43,14 @@ export async function CategoryPage({
     .select('*, variants(*)')
     .eq('is_active', true)
 
-  // Filter by audience (women/men/kids/sports)
   if (config.audience) {
     query = query.eq('audience', config.audience)
   }
 
-  // Filter by product type (shirts/hoodies/etc)
   if (config.productType) {
     query = query.eq('product_type', config.productType)
   }
 
-  // Fall back to collection slug if no audience/productType
   if (!config.audience && !config.productType && config.slug) {
     const { data: collection } = await supabase
       .from('collections')
@@ -75,7 +78,6 @@ export async function CategoryPage({
   const { data: products } = await query
   const favoritedIds = await getFavoritedProductIds()
 
-  // Fetch hero image from collection if slug provided
   let heroImage: string | null = null
   if (config.slug) {
     const { data: collection } = await supabase
@@ -107,7 +109,6 @@ export async function CategoryPage({
         )}
         <div className="absolute inset-0 bg-linear-to-t from-brown/60 via-brown/10 to-transparent" />
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-10 w-full">
-          {/* Breadcrumb */}
           {config.backLink && (
             <div className="flex items-center gap-2 mb-3">
               <Link
@@ -140,7 +141,7 @@ export async function CategoryPage({
         </div>
       </div>
 
-      {/* Back link for product type pages */}
+      {/* Back link */}
       {config.backLink && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
           <Link
@@ -159,7 +160,14 @@ export async function CategoryPage({
             <ProductFilters />
           </Suspense>
           <div className="flex-1">
-            <ProductGrid products={products ?? []} favoritedIds={favoritedIds} />
+            <ProductGrid
+              products={products ?? []}
+              favoritedIds={favoritedIds}
+              emptyMessage={config.emptyMessage ?? 'No products found.'}
+              emptySubmessage={config.emptySubmessage ?? 'Check back soon — new pieces are on the way.'}
+              emptyHref={config.audience ? `/${config.audience}/shop` : '/shop'}
+              emptyActionLabel={config.audience ? `Browse all ${config.label.split(' ')[0]} products` : 'Browse all products'}
+            />
           </div>
         </div>
       </div>
