@@ -19,8 +19,8 @@ export function FavoriteButton({
   const [isPending, startTransition] = useTransition()
   const supabase = createClient()
 
-  const iconSize = size === 'sm' ? 'w-4 h-4' : size === 'lg' ? 'w-6 h-6' : 'w-5 h-5'
-  const buttonSize = size === 'sm' ? 'p-1.5' : size === 'lg' ? 'p-2.5' : 'p-2'
+  const iconSize = size === 'sm' ? 'w-6 h-6' : size === 'lg' ? 'w-9 h-9' : 'w-7 h-7'
+const buttonSize = size === 'sm' ? 'w-10 h-10' : size === 'lg' ? 'w-14 h-14' : 'w-12 h-12'
 
   async function toggle() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -41,16 +41,12 @@ export function FavoriteButton({
       onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggle() }}
       disabled={isPending}
       aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
-      className={`rounded-full transition-all duration-200 ${buttonSize} ${
-        favorited
-          ? 'text-red-500 hover:bg-red-50'
-          : 'text-brown hover:bg-brown/5'
-      } disabled:opacity-50 ${className}`}
+      className={`${buttonSize} rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm transition-all duration-200 hover:bg-white hover:scale-110 disabled:opacity-50 ${className}`}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
-        className={iconSize}
+        className={`${iconSize} transition-colors duration-200 ${favorited ? 'text-red-500' : 'text-brown/60'}`}
         fill={favorited ? 'currentColor' : 'none'}
         stroke="currentColor"
         strokeWidth={favorited ? 0 : 1.75}
