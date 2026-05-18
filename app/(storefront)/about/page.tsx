@@ -1,61 +1,38 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
+import Image from 'next/image'
 import { aboutMetadata } from '@/lib/static-metadata'
+import { getSectionContent } from '@/lib/sections'
 
-export { aboutMetadata as metadata }
+export const metadata = aboutMetadata
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const content = await getSectionContent('about', {
+    heading: 'About Known & Worn',
+    body: '<p>Known & Worn is a Philippines-based apparel brand built around clean design and honest materials.</p>',
+    image_url: '',
+  })
+
   return (
-    <div className="max-w-2xl mx-auto px-4 py-16">
+    <div className="max-w-3xl mx-auto px-4 py-16">
+      <p className="text-xs text-brown-light uppercase tracking-widest mb-3">About</p>
+      <h1 className="text-4xl font-light text-brown mb-10">{content.heading}</h1>
 
-      <p className="text-xs text-brown-light uppercase tracking-widest mb-4">About</p>
-      <h1 className="text-4xl font-light text-brown leading-tight mb-6">
-        What you wear says something.<br />Make it count.
-      </h1>
-      <p className="text-brown-light leading-relaxed mb-10">
-        Known & Worn is built for everyday expression. Pieces you reach for without thinking, but still say exactly who you are.
-      </p>
-
-      <div className="border-t border-peach-light pt-10 mb-10">
-        <h2 className="text-xs text-brown-light uppercase tracking-widest mb-6">The name</h2>
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <p className="text-lg font-medium text-brown mb-2">Known</p>
-            <p className="text-sm text-brown-light leading-relaxed">
-              Identity. How people see you — your presence, your character, the impression you leave.
-            </p>
-          </div>
-          <div>
-            <p className="text-lg font-medium text-brown mb-2">Worn</p>
-            <p className="text-sm text-brown-light leading-relaxed">
-              Expression. How you show up every day — what you put on, what feels right, what feels like you.
-            </p>
-          </div>
+      {content.image_url && (
+        <div className="relative w-full aspect-video rounded-2xl overflow-hidden mb-10 bg-whitewash-off">
+          <Image
+            src={content.image_url}
+            alt={content.heading}
+            fill
+            priority
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, 768px"
+          />
         </div>
-      </div>
+      )}
 
-      <div className="border-t border-peach-light pt-10 mb-10">
-        <h2 className="text-xs text-brown-light uppercase tracking-widest mb-6">What we make</h2>
-        <p className="text-brown-light leading-relaxed mb-4">
-          Clean, expressive streetwear. Minimal but intentional. Not loud for the sake of it, not basic for the sake of it.
-        </p>
-        <p className="text-brown-light leading-relaxed">
-          We build pieces for repeat wear — clothes that hold up, that fit into your life, and that still feel deliberate every time you reach for them.
-        </p>
-      </div>
-
-      <div className="border-t border-peach-light pt-10">
-        <p className="text-sm text-brown-light mb-6">
-          Questions, feedback, or just want to talk — we're easy to reach.
-        </p>
-        <Link
-          href="/contact"
-          className="inline-block bg-brown text-whitewash text-sm font-medium rounded-full px-8 py-3 hover:bg-brown-light transition-colors"
-        >
-          Get in touch
-        </Link>
-      </div>
-
+      <div
+        className="prose prose-sm max-w-none prose-headings:font-medium prose-headings:text-brown prose-p:text-brown-light prose-p:leading-relaxed prose-li:text-brown-light prose-strong:text-brown"
+        dangerouslySetInnerHTML={{ __html: content.body }}
+      />
     </div>
   )
 }

@@ -1,8 +1,11 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Logo } from '@/components/ui/Logo'
+import { getSiteSettings } from '@/lib/sections'
 
-export function Footer() {
+export async function Footer() {
+  const settings = await getSiteSettings()
+
   return (
     <footer className="border-t border-peach-light bg-whitewash mt-20">
       <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-2 md:grid-cols-5 gap-8 text-sm text-brown-light">
@@ -13,42 +16,34 @@ export function Footer() {
             <Logo width={110} />
           </div>
 
-          <p className="leading-relaxed">
-            Clean, expressive streetwear. Built for everyday wear, made in the Philippines.
-          </p>
+          <p className="leading-relaxed">{settings.footer_tagline}</p>
 
           <div className="flex items-center gap-3 mt-4">
-            <a
-              href="https://www.facebook.com/profile.php?id=61570705350137"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-brown transition-colors"
-              aria-label="Facebook"
-            >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-              </svg>
-            </a>
-
-            <a
-              href="mailto:mark.payns@gmail.com"
-              className="hover:text-brown transition-colors"
-              aria-label="Email us"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={1.75}
-                viewBox="0 0 24 24"
+            {settings.facebook_url && settings.facebook_url !== '#' && (
+              <a
+                href={settings.facebook_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-brown transition-colors"
+                aria-label="Facebook"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0l-9.75 6.75L2.25 6.75"
-                />
-              </svg>
-            </a>
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+              </a>
+            )}
+
+            {settings.email && (
+              <a
+                href={`mailto:${settings.email}`}
+                className="hover:text-brown transition-colors"
+                aria-label="Email us"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={1.75} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0l-9.75 6.75L2.25 6.75" />
+                </svg>
+              </a>
+            )}
           </div>
         </div>
 
@@ -114,7 +109,7 @@ export function Footer() {
       <div className="border-t border-peach-light py-4 px-4">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-brown-light">
 
-          {/* Left: copyright + legal links */}
+          {/* Left: copyright + legal */}
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1">
             <span>© {new Date().getFullYear()} Known & Worn. All rights reserved.</span>
             <Link href="/privacy" className="hover:text-brown transition-colors">Privacy</Link>
@@ -127,7 +122,7 @@ export function Footer() {
             <span className="text-brown-light/50 mr-1">Also on</span>
 
             <a
-              href="#"
+              href={settings.tiktok_url || '#'}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Shop on TikTok Shop"
@@ -143,7 +138,7 @@ export function Footer() {
             </a>
 
             <a
-              href="#"
+              href={settings.shopee_url || '#'}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Shop on Shopee"
@@ -159,7 +154,7 @@ export function Footer() {
             </a>
 
             <a
-              href="#"
+              href={settings.lazada_url || '#'}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Shop on Lazada"

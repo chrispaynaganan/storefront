@@ -2,15 +2,17 @@ import { notFound, redirect } from 'next/navigation'
 import { CategoryPage } from '@/components/category/CategoryPage'
 
 const AUDIENCES: Record<string, string> = {
-  women: "Women's",
-  men:   "Men's",
-  kids:  "Kids'",
+  women:  "Women's",
+  men:    "Men's",
+  kids:   "Kids'",
   sports: 'Sports',
 }
 
 const PRODUCT_TYPES: Record<string, { label: string; description: string }> = {
-  shirts:  { label: 'Shirts',  description: 'Clean, minimal shirts built for everyday wear.' },
-  hoodies: { label: 'Hoodies', description: 'Premium heavyweight hoodies. Covered in faith.' },
+  shirts:      { label: 'Shirts',      description: 'Clean, minimal shirts built for everyday wear.' },
+  hoodies:     { label: 'Hoodies',     description: 'Premium heavyweight hoodies. Covered in faith.' },
+  sportswear:  { label: 'Sportswear',  description: 'Performance wear built for movement.' },
+  accessories: { label: 'Accessories', description: 'The finishing touch to every outfit.' },
 }
 
 interface Props {
@@ -33,14 +35,14 @@ export default async function AudienceProductTypePage({ params, searchParams }: 
   // Unknown audience → 404
   if (!audienceLabel) notFound()
 
-  // new-arrivals → redirect to filtered new arrivals page
+  // /[audience]/new-arrivals → redirect to filtered new arrivals
   if (productType === 'new-arrivals') {
     redirect(`/new-arrivals?audience=${audience}`)
   }
 
   const typeConfig = PRODUCT_TYPES[productType]
 
-  // Unknown product type → redirect to audience shop instead of 404
+  // Unknown product type (including 'shop' — handled by its own route) → redirect to audience shop
   if (!typeConfig) {
     redirect(`/${audience}/shop`)
   }

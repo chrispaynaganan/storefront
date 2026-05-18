@@ -100,7 +100,7 @@ export function PageEditorClient({ page: initial }: { page: SitePage }) {
         <div className="flex items-center gap-2 ml-auto">
           {published && (
             <a
-              href={`/${slug}`}
+              href={`/pages/${slug}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-xs text-brown-light hover:text-brown transition-colors"
@@ -146,7 +146,7 @@ export function PageEditorClient({ page: initial }: { page: SitePage }) {
           </label>
           <div className="flex items-center border border-peach-light rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-peach">
             <span className="px-3 py-2 bg-whitewash text-sm text-brown/40 border-r border-peach-light whitespace-nowrap">
-              knownandworn.com/
+              knownandworn.com/pages/
             </span>
             <input
               type="text"
@@ -166,7 +166,7 @@ export function PageEditorClient({ page: initial }: { page: SitePage }) {
             : 'bg-peach-light/40 text-brown-light border border-peach-light'
         }`}>
           {published
-            ? <><Globe className="w-4 h-4" /> Live at <span className="font-mono text-xs ml-1">/{slug}</span></>
+            ? <><Globe className="w-4 h-4" /> Live at <span className="font-mono text-xs ml-1">/pages/{slug}</span></>
             : <><EyeOff className="w-4 h-4" /> Draft — not visible to visitors</>
           }
         </div>

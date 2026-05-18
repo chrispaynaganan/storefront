@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Quicksand } from 'next/font/google'
+import { Gelasio } from 'next/font/google'
 import './globals.css'
 import {
   SITE_NAME,
@@ -8,10 +8,12 @@ import {
   DEFAULT_OG_IMAGE,
   DEFAULT_KEYWORDS,
 } from '@/lib/seo'
+import { OrganizationJsonLd } from '@/components/seo/OrganizationJsonLd'
 
-const quicksand = Quicksand({
+const gelasio = Gelasio({
   subsets: ['latin'],
-  variable: '--font-quicksand',
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-gelasio',
   display: 'swap',
 })
 
@@ -35,12 +37,10 @@ export const metadata: Metadata = {
   creator: SITE_NAME,
   publisher: SITE_NAME,
 
-  // Canonical + alternate
   alternates: {
     canonical: '/',
   },
 
-  // Open Graph defaults (overridden per page)
   openGraph: {
     type: 'website',
     locale: 'en_PH',
@@ -58,16 +58,13 @@ export const metadata: Metadata = {
     ],
   },
 
-  // Twitter / X card
   twitter: {
     card: 'summary_large_image',
     title: `${SITE_NAME} — Filipino Streetwear`,
     description: SITE_DESCRIPTION,
     images: [DEFAULT_OG_IMAGE],
-    // site: SITE_TWITTER, // uncomment when you have a Twitter handle
   },
 
-  // Indexing
   robots: {
     index: true,
     follow: true,
@@ -80,25 +77,17 @@ export const metadata: Metadata = {
     },
   },
 
-  // Verification — add keys when you set up Search Console / Bing
-  // verification: {
-  //   google: 'YOUR_GOOGLE_SITE_VERIFICATION',
-  //   other: { 'msvalidate.01': 'BING_KEY' },
-  // },
-
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
-  },
+  icon: '/favicon.ico',
+},
 
-  manifest: '/site.webmanifest',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en-PH" className={quicksand.variable}>
+    <html lang="en-PH" className={gelasio.variable}>
       <body className="font-sans bg-whitewash text-brown antialiased">
+        <OrganizationJsonLd />
         {children}
       </body>
     </html>
