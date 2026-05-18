@@ -1,8 +1,6 @@
-// app/(admin)/admin/layout.tsx
-
 import { redirect } from 'next/navigation'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
-import AdminNav from '@/components/layout/AdminSidebar'
+import { AdminSidebar } from '@/components/layout/AdminSidebar'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createServerSupabaseClient()
@@ -25,15 +23,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-whitewash">
-      <AdminNav
+      <AdminSidebar
         userEmail={user.email}
         avatarUrl={profile?.avatar_url}
         firstName={firstName}
         userRole={profile?.role ?? 'admin'}
       />
 
-      {/* Main content: offset for sidebar on lg+, offset for top navbar on md */}
-      <div className="lg:pl-78">
+      {/* Offset content by sidebar width (220px) */}
+      <div className="pl-55">
         <main className="min-w-0 pb-28 lg:pb-8">
           {children}
         </main>
