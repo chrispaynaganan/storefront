@@ -11,7 +11,6 @@ interface Props {
   description?: string | null
 }
 
-// Derive unique sizes and colors from variants
 function getSizes(variants: Variant[]) {
   const seen = new Set<string>()
   return variants
@@ -19,31 +18,61 @@ function getSizes(variants: Variant[]) {
     .map(v => v.size as string)
 }
 
-function getColors(variants: Variant[]) {
+// Only return colors available for the currently selected size
+function getColorsForSize(variants: Variant[], size: string | null) {
   const seen = new Set<string>()
   return variants
-    .filter(v => v.color && !seen.has(v.color) && seen.add(v.color))
-    .map(v => ({ color: v.color as string, hex: v.color_hex as string | undefined }))
+    .filter(v =>
+      v.color &&
+      (size ? v.size === size : true) &&
+      !seen.has(v.color) &&
+      seen.add(v.color)
+    )
+    .map(v => v.color as string)
 }
 
 function findVariant(variants: Variant[], size: string | null, color: string | null) {
   return variants.find(v =>
     (size ? v.size === size : true) &&
-    (color ? v.color === color : true)
+    (color ? v.color === color : !v.color)
   ) ?? null
+}
+
+// Light colors need a dark checkmark
+const LIGHT_HEX = new Set([
+  '#ffffff', '#fff', '#fafaf4', '#f5f5f5',
+  '#f5f0e8', '#ffcba4', '#ffe8d6', '#faf7f4', '#f2ede8',
+])
+
+function isLightColor(hex: string) {
+  return LIGHT_HEX.has(hex.toLowerCase())
 }
 
 export function AddToCartButton({ variants, productId, description }: Props) {
   const sizes = getSizes(variants)
-  const colors = getColors(variants)
 
   const [selectedSize, setSelectedSize] = useState<string | null>(sizes[0] ?? null)
-  const [selectedColor, setSelectedColor] = useState<string | null>(colors[0]?.color ?? null)
+
+  // Derive colors for initial size
+  const initialColors = getColorsForSize(variants, sizes[0] ?? null)
+  const [selectedColor, setSelectedColor] = useState<string | null>(initialColors[0] ?? null)
+
   const [qty, setQty] = useState(1)
   const [adding, setAdding] = useState(false)
   const [buying, setBuying] = useState(false)
   const [added, setAdded] = useState(false)
   const { refreshCart } = useCart()
+
+  // Colors available for the currently selected size
+  const colors = getColorsForSize(variants, selectedSize)
+
+  function handleSizeChange(size: string) {
+    setSelectedSize(size)
+    // Reset color to first available for new size
+    const newColors = getColorsForSize(variants, size)
+    setSelectedColor(newColors[0] ?? null)
+    setQty(1)
+  }
 
   const selected = findVariant(variants, selectedSize, selectedColor)
   const total = selected ? selected.price * qty : null
@@ -114,7 +143,7 @@ export function AddToCartButton({ variants, productId, description }: Props) {
               return (
                 <button
                   key={size}
-                  onClick={() => setSelectedSize(size)}
+                  onClick={() => handleSizeChange(size)}
                   disabled={!available}
                   className={`w-12 h-12 rounded-full text-sm font-medium transition-all duration-150
                     ${isActive
@@ -137,30 +166,23 @@ export function AddToCartButton({ variants, productId, description }: Props) {
         <div>
           <p className="text-sm font-medium text-brown mb-3">Select Color</p>
           <div className="flex flex-wrap gap-2.5">
-            {colors.map(({ color, hex }) => {
-              const isActive = selectedColor === color
-              const bgStyle = hex ? { backgroundColor: hex } : {}
-              // Determine if white/light swatch — show border
-              const isLight = hex && (
-                hex.toLowerCase() === '#ffffff' ||
-                hex.toLowerCase() === '#fff' ||
-                hex.toLowerCase() === '#fafaf4' ||
-                hex.toLowerCase() === '#f5f5f5'
-              )
+            {colors.map(hex => {
+              const isActive = selectedColor === hex
+              const light = isLightColor(hex)
               return (
                 <button
-                  key={color}
-                  onClick={() => setSelectedColor(color)}
-                  title={color}
-                  style={bgStyle}
+                  key={hex}
+                  onClick={() => setSelectedColor(hex)}
+                  title={hex}
+                  style={{ backgroundColor: hex }}
                   className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-150
-                    ${isLight ? 'border border-peach' : ''}
+                    ${light ? 'border border-peach' : ''}
                     ${isActive ? 'ring-2 ring-offset-2 ring-brown' : 'hover:scale-105'}
                   `}
                 >
                   {isActive && (
                     <svg
-                      className={`w-5 h-5 ${isLight ? 'text-brown' : 'text-white'}`}
+                      className={`w-5 h-5 ${light ? 'text-brown' : 'text-white'}`}
                       fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"
                     >
                       <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
@@ -177,18 +199,15 @@ export function AddToCartButton({ variants, productId, description }: Props) {
       <div>
         <p className="text-sm font-medium text-brown mb-3">Qty</p>
         <div className="flex items-center gap-3">
-          {/* Number display — pill */}
           <div className="w-24 h-12 bg-whitewash-off rounded-full flex items-center justify-center">
             <span className="text-base font-medium text-brown">{qty}</span>
           </div>
-          {/* Minus */}
           <button
             onClick={() => setQty(q => Math.max(1, q - 1))}
             className="w-12 h-12 rounded-full border border-peach-light flex items-center justify-center text-brown hover:bg-whitewash-off transition-colors text-lg"
           >
             −
           </button>
-          {/* Plus */}
           <button
             onClick={() => setQty(q => Math.min(selected?.stock_qty ?? 10, q + 1))}
             disabled={!selected || qty >= (selected?.stock_qty ?? 10)}
@@ -204,7 +223,6 @@ export function AddToCartButton({ variants, productId, description }: Props) {
 
       {/* CTA row */}
       <div className="flex items-center gap-3">
-        {/* Purchase — grows */}
         <button
           onClick={buyNow}
           disabled={!selected || buying || isOutOfStock}
@@ -220,7 +238,6 @@ export function AddToCartButton({ variants, productId, description }: Props) {
           )}
         </button>
 
-        {/* Add to bag — icon only */}
         <button
           onClick={addToCart}
           disabled={!selected || adding || isOutOfStock}

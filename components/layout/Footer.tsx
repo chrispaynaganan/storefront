@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Logo } from '@/components/ui/Logo'
 
 export function Footer() {
@@ -109,11 +110,72 @@ export function Footer() {
 
       </div>
 
-      <div className="border-t border-peach-light text-center text-xs text-brown-light py-4 space-x-4">
-        <span>© {new Date().getFullYear()} Known & Worn. All rights reserved.</span>
-        <Link href="/privacy" className="hover:text-brown transition-colors">Privacy</Link>
-        <Link href="/terms" className="hover:text-brown transition-colors">Terms</Link>
-        <Link href="/accessibility" className="hover:text-brown transition-colors">Accessibility</Link>
+      {/* Bottom bar */}
+      <div className="border-t border-peach-light py-4 px-4">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-brown-light">
+
+          {/* Left: copyright + legal links */}
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-1">
+            <span>© {new Date().getFullYear()} Known & Worn. All rights reserved.</span>
+            <Link href="/privacy" className="hover:text-brown transition-colors">Privacy</Link>
+            <Link href="/terms" className="hover:text-brown transition-colors">Terms</Link>
+            <Link href="/accessibility" className="hover:text-brown transition-colors">Accessibility</Link>
+          </div>
+
+          {/* Right: marketplace icons */}
+          <div className="flex items-center gap-2">
+            <span className="text-brown-light/50 mr-1">Also on</span>
+
+            <a
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Shop on TikTok Shop"
+              className="opacity-60 hover:opacity-100 transition-opacity duration-200"
+            >
+              <Image
+                src="/marketplace/tiktok-shop.webp"
+                alt="TikTok Shop"
+                width={24}
+                height={24}
+                className="w-6 h-6 object-contain"
+              />
+            </a>
+
+            <a
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Shop on Shopee"
+              className="opacity-60 hover:opacity-100 transition-opacity duration-200"
+            >
+              <Image
+                src="/marketplace/shopee.webp"
+                alt="Shopee"
+                width={24}
+                height={24}
+                className="w-6 h-6 object-contain"
+              />
+            </a>
+
+            <a
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Shop on Lazada"
+              className="opacity-60 hover:opacity-100 transition-opacity duration-200"
+            >
+              <Image
+                src="/marketplace/lazada.webp"
+                alt="Lazada"
+                width={24}
+                height={24}
+                className="w-6 h-6 object-contain"
+              />
+            </a>
+          </div>
+
+        </div>
       </div>
     </footer>
   )

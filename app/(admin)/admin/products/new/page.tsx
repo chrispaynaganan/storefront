@@ -12,7 +12,7 @@ export default async function AdminNewProductPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-light text-[#3B1F0E] mb-8">Add product</h1>
+      <h1 className="text-2xl font-light text-brown mb-8">Add product</h1>
       <ProductForm collections={collections ?? []} />
     </div>
   )

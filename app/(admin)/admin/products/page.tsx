@@ -51,6 +51,9 @@ const PRESET_COLORS = [
   { label: 'Pink',   value: '#FFCBA4' },
 ]
 
+// Light colors that need a dark checkmark
+const LIGHT_COLORS = new Set(['#FFFFFF', '#F5F0E8', '#FFCBA4', '#9CA3AF'])
+
 function generateSku(productSlug: string, size: string): string {
   const abbrev = productSlug
     .toUpperCase()
@@ -98,19 +101,11 @@ function SelectInput(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   )
 }
 
-// Dropdown with fixed options + "Add new..." to extend the list
 function ExpandableSelect({
-  value,
-  onChange,
-  options,
-  onAddOption,
-  placeholder = 'Select...',
+  value, onChange, options, onAddOption, placeholder = 'Select...',
 }: {
-  value: string
-  onChange: (v: string) => void
-  options: string[]
-  onAddOption: (v: string) => void
-  placeholder?: string
+  value: string; onChange: (v: string) => void; options: string[]
+  onAddOption: (v: string) => void; placeholder?: string
 }) {
   const [adding, setAdding] = useState(false)
   const [newValue, setNewValue] = useState('')
@@ -133,15 +128,12 @@ function ExpandableSelect({
           className="w-full appearance-none bg-gray-100 rounded-2xl px-4 py-3 text-sm text-brown outline-none focus:ring-2 focus:ring-peach transition pr-10"
         >
           <option value="">{placeholder}</option>
-          {options.map(o => (
-            <option key={o} value={o.toLowerCase()}>{o}</option>
-          ))}
+          {options.map(o => <option key={o} value={o.toLowerCase()}>{o}</option>)}
         </select>
         <svg className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brown/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </div>
-
       {adding ? (
         <div className="flex gap-2">
           <input
@@ -152,56 +144,14 @@ function ExpandableSelect({
             placeholder="Type new option..."
             className="flex-1 bg-gray-100 rounded-2xl px-4 py-2.5 text-sm text-brown placeholder:text-brown/30 outline-none focus:ring-2 focus:ring-peach transition"
           />
-          <button
-            type="button"
-            onClick={handleAdd}
-            className="px-4 py-2.5 bg-brown text-white text-sm rounded-2xl hover:bg-brown-light transition"
-          >
-            Add
-          </button>
-          <button
-            type="button"
-            onClick={() => setAdding(false)}
-            className="px-3 py-2.5 bg-gray-100 text-brown text-sm rounded-2xl hover:bg-gray-200 transition"
-          >
-            ✕
-          </button>
+          <button type="button" onClick={handleAdd} className="px-4 py-2.5 bg-brown text-white text-sm rounded-2xl hover:bg-brown-light transition">Add</button>
+          <button type="button" onClick={() => setAdding(false)} className="px-3 py-2.5 bg-gray-100 text-brown text-sm rounded-2xl hover:bg-gray-200 transition">✕</button>
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="text-xs text-brown/40 hover:text-brown underline text-left transition"
-        >
+        <button type="button" onClick={() => setAdding(true)} className="text-xs text-brown/40 hover:text-brown underline text-left transition">
           + Add new option
         </button>
       )}
-    </div>
-  )
-}
-
-function ColorPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="flex items-center gap-2 flex-wrap mt-2">
-      {PRESET_COLORS.map(c => (
-        <button
-          key={c.value}
-          type="button"
-          title={c.label}
-          onClick={() => onChange(c.value)}
-          className={`w-7 h-7 rounded-full border-2 transition-all ${
-            value === c.value ? 'border-brown scale-110' : 'border-transparent hover:border-brown/40'
-          }`}
-          style={{ backgroundColor: c.value }}
-        />
-      ))}
-      <input
-        type="color"
-        value={value || '#000000'}
-        onChange={e => onChange(e.target.value)}
-        title="Custom color"
-        className="w-7 h-7 rounded-full cursor-pointer border border-peach-light"
-      />
     </div>
   )
 }
@@ -225,9 +175,7 @@ function RichTextEditor({ value, onChange }: { value: string; onChange: (v: stri
     <button
       type="button"
       onClick={onClick}
-      className={`px-2 py-1 rounded text-sm font-medium transition-colors ${
-        active ? 'bg-brown text-whitewash' : 'text-brown/60 hover:text-brown hover:bg-gray-100'
-      }`}
+      className={`px-2 py-1 rounded text-sm font-medium transition-colors ${active ? 'bg-brown text-whitewash' : 'text-brown/60 hover:text-brown hover:bg-gray-100'}`}
     >
       {children}
     </button>
@@ -263,7 +211,14 @@ function EditVariantModal({
   const [stock, setStock] = useState(String(variant.stock_qty))
 
   function handleSave() {
-    onSave({ ...variant, size, color, price: parseFloat(price), compare_at_price: compareAt ? parseFloat(compareAt) : null, stock_qty: parseInt(stock) })
+    onSave({
+      ...variant,
+      size,
+      color,
+      price: parseFloat(price),
+      compare_at_price: compareAt ? parseFloat(compareAt) : null,
+      stock_qty: parseInt(stock),
+    })
     onClose()
   }
 
@@ -282,20 +237,54 @@ function EditVariantModal({
             {SIZES.map(s => <option key={s}>{s}</option>)}
           </SelectInput>
         </Field>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
           <label className="text-sm text-brown/70 font-medium">Color <span className="text-brown/30 font-normal">(optional)</span></label>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full border border-peach-light shrink-0" style={{ backgroundColor: color || '#f0f0f0' }} />
-            <TextInput value={color} onChange={e => setColor(e.target.value)} placeholder="#000000 or leave empty" />
+          <div className="flex items-center gap-2 flex-wrap">
+            {PRESET_COLORS.map(c => {
+              const selected = color === c.value
+              return (
+                <button
+                  key={c.value}
+                  type="button"
+                  title={c.label}
+                  onClick={() => setColor(selected ? '' : c.value)}
+                  className={`w-8 h-8 rounded-full border-2 transition-all relative ${selected ? 'border-brown scale-110' : 'border-transparent hover:border-brown/40'}`}
+                  style={{ backgroundColor: c.value }}
+                >
+                  {selected && (
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <svg className="w-3.5 h-3.5 drop-shadow" viewBox="0 0 24 24" fill="none" stroke={LIGHT_COLORS.has(c.value) ? '#3B1F0E' : 'white'} strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+            <input
+              type="color"
+              value={color || '#000000'}
+              onChange={e => setColor(e.target.value)}
+              title="Custom color"
+              className="w-8 h-8 rounded-full cursor-pointer border border-peach-light"
+            />
           </div>
-          <ColorPicker value={color} onChange={setColor} />
+          {color && (
+            <div className="flex items-center gap-2 bg-gray-100 rounded-2xl px-3 py-2 w-fit">
+              <div className="w-4 h-4 rounded-full border border-white/50 shrink-0" style={{ backgroundColor: color }} />
+              <span className="text-xs text-brown/70 font-mono">{color}</span>
+              <button type="button" onClick={() => setColor('')} className="text-brown/30 hover:text-brown/70 transition leading-none ml-1">×</button>
+            </div>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Price (PHP)"><TextInput type="number" value={price} onChange={e => setPrice(e.target.value)} /></Field>
           <Field label="Compare at (PHP)"><TextInput type="number" value={compareAt} onChange={e => setCompareAt(e.target.value)} /></Field>
         </div>
         <Field label="Stock"><TextInput type="number" value={stock} onChange={e => setStock(e.target.value)} /></Field>
-        <button onClick={handleSave} className="w-full bg-brown-light text-white font-semibold rounded-2xl py-3.5 hover:bg-brown transition">Save Changes</button>
+        <button onClick={handleSave} className="w-full bg-brown-light text-white font-semibold rounded-2xl py-3.5 hover:bg-brown transition">
+          Save Changes
+        </button>
       </div>
     </div>
   )
@@ -304,18 +293,46 @@ function EditVariantModal({
 function AddSizeModal({
   productSlug, onAdd, onClose,
 }: {
-  productSlug: string; onAdd: (v: Variant) => void; onClose: () => void
+  productSlug: string; onAdd: (variants: Variant[]) => void; onClose: () => void
 }) {
   const [size, setSize] = useState('S')
-  const [color, setColor] = useState('')
+  const [selectedColors, setSelectedColors] = useState<string[]>([])
+  const [customColor, setCustomColor] = useState('')
   const [price, setPrice] = useState('')
   const [compareAt, setCompareAt] = useState('')
   const [stock, setStock] = useState('')
+
   const previewSku = generateSku(productSlug || 'product', size)
+
+  function toggleColor(hex: string) {
+    setSelectedColors(prev =>
+      prev.includes(hex) ? prev.filter(c => c !== hex) : [...prev, hex]
+    )
+  }
+
+  function addCustomColor() {
+    const trimmed = customColor.trim()
+    if (!trimmed || selectedColors.includes(trimmed)) return
+    setSelectedColors(prev => [...prev, trimmed])
+    setCustomColor('')
+  }
+
+  function removeColor(hex: string) {
+    setSelectedColors(prev => prev.filter(c => c !== hex))
+  }
 
   function handleAdd() {
     if (!price || !stock) return
-    onAdd({ size, color, price: parseFloat(price), compare_at_price: compareAt ? parseFloat(compareAt) : null, stock_qty: parseInt(stock), sku: generateSku(productSlug || 'product', size) })
+    const colorsToAdd = selectedColors.length > 0 ? selectedColors : ['']
+    const newVariants: Variant[] = colorsToAdd.map(color => ({
+      size,
+      color,
+      price: parseFloat(price),
+      compare_at_price: compareAt ? parseFloat(compareAt) : null,
+      stock_qty: parseInt(stock),
+      sku: generateSku(productSlug || 'product', size),
+    }))
+    onAdd(newVariants)
     onClose()
   }
 
@@ -323,38 +340,132 @@ function AddSizeModal({
     <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 flex flex-col gap-5 max-h-[90dvh] overflow-y-auto">
+
+        {/* Header */}
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-bold text-brown">Add Size</h3>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition">
-            <svg className="w-5 h-5 text-brown/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            <svg className="w-5 h-5 text-brown/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
+
+        {/* Size */}
         <Field label="Size">
           <SelectInput value={size} onChange={e => setSize(e.target.value)}>
             {SIZES.map(s => <option key={s}>{s}</option>)}
           </SelectInput>
         </Field>
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm text-brown/70 font-medium">Color <span className="text-brown/30 font-normal">(optional)</span></label>
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full border border-peach-light shrink-0" style={{ backgroundColor: color || '#f0f0f0' }} />
-            <TextInput value={color} onChange={e => setColor(e.target.value)} placeholder="#000000 or leave empty" />
+
+        {/* Colors */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm text-brown/70 font-medium">
+            Color <span className="text-brown/30 font-normal">(optional — select multiple)</span>
+          </label>
+
+          {/* Preset swatches */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {PRESET_COLORS.map(c => {
+              const selected = selectedColors.includes(c.value)
+              return (
+                <button
+                  key={c.value}
+                  type="button"
+                  title={c.label}
+                  onClick={() => toggleColor(c.value)}
+                  className={`w-8 h-8 rounded-full border-2 transition-all relative ${
+                    selected ? 'border-brown scale-110' : 'border-transparent hover:border-brown/40'
+                  }`}
+                  style={{ backgroundColor: c.value }}
+                >
+                  {selected && (
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <svg className="w-3.5 h-3.5 drop-shadow" viewBox="0 0 24 24" fill="none" stroke={LIGHT_COLORS.has(c.value) ? '#3B1F0E' : 'white'} strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+
+            {/* Custom color picker */}
+            <input
+              type="color"
+              value={customColor || '#000000'}
+              onChange={e => setCustomColor(e.target.value)}
+              onBlur={() => { if (customColor) addCustomColor() }}
+              title="Custom color"
+              className="w-8 h-8 rounded-full cursor-pointer border border-peach-light"
+            />
           </div>
-          <ColorPicker value={color} onChange={setColor} />
+
+          {/* Selected color pills */}
+          {selectedColors.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-1">
+              {selectedColors.map(hex => (
+                <div key={hex} className="flex items-center gap-1.5 bg-gray-100 rounded-full pl-1.5 pr-2.5 py-1">
+                  <div className="w-4 h-4 rounded-full border border-white/50 shrink-0" style={{ backgroundColor: hex }} />
+                  <span className="text-xs text-brown/70 font-mono">{hex}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeColor(hex)}
+                    className="ml-0.5 text-brown/30 hover:text-brown/70 transition leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {selectedColors.length === 0 && (
+            <p className="text-xs text-brown/30">No color selected — variant will be colorless</p>
+          )}
         </div>
+
+        {/* Price & Compare */}
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Price (PHP)"><TextInput type="number" placeholder="0" value={price} onChange={e => setPrice(e.target.value)} /></Field>
-          <Field label="Compare at (PHP)"><TextInput type="number" placeholder="0" value={compareAt} onChange={e => setCompareAt(e.target.value)} /></Field>
+          <Field label="Price (PHP)">
+            <TextInput type="number" placeholder="0" value={price} onChange={e => setPrice(e.target.value)} />
+          </Field>
+          <Field label="Compare at (PHP)">
+            <TextInput type="number" placeholder="0" value={compareAt} onChange={e => setCompareAt(e.target.value)} />
+          </Field>
         </div>
-        <Field label="Stock"><TextInput type="number" placeholder="0" value={stock} onChange={e => setStock(e.target.value)} /></Field>
+
+        {/* Stock */}
+        <Field label="Stock">
+          <TextInput type="number" placeholder="0" value={stock} onChange={e => setStock(e.target.value)} />
+        </Field>
+
+        {/* SKU preview */}
         <div className="flex flex-col gap-1.5">
-          <label className="text-sm text-brown/70 font-medium">SKU <span className="text-brown/30 font-normal">(auto-generated)</span></label>
-          <div className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm text-brown/50 font-mono tracking-wide select-all">{previewSku}</div>
+          <label className="text-sm text-brown/70 font-medium">
+            SKU <span className="text-brown/30 font-normal">
+              (auto-generated{selectedColors.length > 1 ? ` · ${selectedColors.length} variants` : ''})
+            </span>
+          </label>
+          <div className="bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3 text-sm text-brown/50 font-mono tracking-wide select-all">
+            {previewSku}{selectedColors.length > 1 ? ` + ${selectedColors.length - 1} more` : ''}
+          </div>
         </div>
-        <button onClick={handleAdd} className="w-full bg-brown-light text-white font-semibold rounded-2xl py-3.5 flex items-center justify-center gap-2 hover:bg-brown transition mt-1">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-          Add Size
+
+        {/* Submit */}
+        <button
+          onClick={handleAdd}
+          disabled={!price || !stock}
+          className="w-full bg-brown-light text-white font-semibold rounded-2xl py-3.5 flex items-center justify-center gap-2 hover:bg-brown transition mt-1 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          {selectedColors.length > 1
+            ? `Add ${selectedColors.length} Variants (Size ${size})`
+            : 'Add Size'}
         </button>
+
       </div>
     </div>
   )
@@ -405,7 +516,13 @@ function ProductModal({
     if (updated.id) {
       const { error } = await supabase
         .from('variants')
-        .update({ size: updated.size, color: updated.color || null, price: updated.price, compare_at_price: updated.compare_at_price, stock_qty: updated.stock_qty })
+        .update({
+          size: updated.size,
+          color: updated.color || null,
+          price: updated.price,
+          compare_at_price: updated.compare_at_price,
+          stock_qty: updated.stock_qty,
+        })
         .eq('id', updated.id)
       if (!error) setVariants(prev => prev.map(v => v.id === updated.id ? updated : v))
     } else {
@@ -453,7 +570,9 @@ function ProductModal({
           .from('products').insert(payload).select('id').single()
         if (prodErr) throw prodErr
         if (variants.length) {
-          const { error: vErr } = await supabase.from('variants').insert(variants.map(v => ({ ...v, product_id: prod.id })))
+          const { error: vErr } = await supabase.from('variants').insert(
+            variants.map(v => ({ ...v, product_id: prod.id }))
+          )
           if (vErr) throw vErr
         }
         await logAction({
@@ -506,7 +625,7 @@ function ProductModal({
           <div className="overflow-y-auto flex-1 px-6 py-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
 
-              {/* Left */}
+              {/* Left col */}
               <div className="flex flex-col gap-5">
                 <h3 className="text-xl font-bold text-brown">Basic Info</h3>
 
@@ -579,7 +698,7 @@ function ProductModal({
                 </div>
               </div>
 
-              {/* Right */}
+              {/* Right col */}
               <div className="flex flex-col gap-5">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xl font-bold text-brown">Variants &amp; Pricing</h3>
@@ -606,11 +725,11 @@ function ProductModal({
                       <tbody>
                         {variants.map((v, i) => (
                           <tr key={i} className="border-t border-gray-100">
-                            <td className="px-3 py-2.5 text-brown">{v.size}</td>
+                            <td className="px-3 py-2.5 text-brown font-medium">{v.size}</td>
                             <td className="px-3 py-2.5">
-                              {v.color ? (
-                                <div className="w-5 h-5 rounded-full border border-peach-light shrink-0" style={{ backgroundColor: v.color }} />
-                              ) : <span className="text-brown/30">—</span>}
+                              {v.color
+                                ? <div className="w-5 h-5 rounded-full border border-peach-light" style={{ backgroundColor: v.color }} />
+                                : <span className="text-brown/30">—</span>}
                             </td>
                             <td className="px-3 py-2.5 text-brown">₱{v.price}</td>
                             <td className="px-3 py-2.5 text-brown">{v.stock_qty}</td>
@@ -636,8 +755,8 @@ function ProductModal({
                 >
                   {saving ? (
                     <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                     </svg>
                   ) : (
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
@@ -645,16 +764,26 @@ function ProductModal({
                   {mode === 'add' ? 'Add Product' : 'Update Product'}
                 </button>
               </div>
+
             </div>
           </div>
         </div>
       </div>
 
       {showAddSize && (
-        <AddSizeModal productSlug={slug} onAdd={v => setVariants(prev => [...prev, v])} onClose={() => setShowAddSize(false)} />
+        <AddSizeModal
+          productSlug={slug}
+          onAdd={newVariants => setVariants(prev => [...prev, ...newVariants])}
+          onClose={() => setShowAddSize(false)}
+        />
       )}
       {editVariant && (
-        <EditVariantModal variant={editVariant} productSlug={slug} onSave={handleSaveVariant} onClose={() => setEditVariant(null)} />
+        <EditVariantModal
+          variant={editVariant}
+          productSlug={slug}
+          onSave={handleSaveVariant}
+          onClose={() => setEditVariant(null)}
+        />
       )}
     </>
   )
@@ -666,7 +795,9 @@ function DeleteConfirmModal({ productName, onConfirm, onClose }: { productName: 
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4">
         <h3 className="text-lg font-bold text-brown">Delete product?</h3>
-        <p className="text-sm text-brown/60"><span className="font-semibold text-brown">{productName}</span> will be permanently deleted. This cannot be undone.</p>
+        <p className="text-sm text-brown/60">
+          <span className="font-semibold text-brown">{productName}</span> will be permanently deleted. This cannot be undone.
+        </p>
         <div className="flex gap-3 mt-2">
           <button onClick={onClose} className="flex-1 bg-gray-100 text-brown font-semibold rounded-2xl py-3 hover:bg-gray-200 transition text-sm">Cancel</button>
           <button onClick={onConfirm} className="flex-1 bg-red-500 text-white font-semibold rounded-2xl py-3 hover:bg-red-600 transition text-sm">Delete</button>
@@ -736,10 +867,16 @@ export default function AdminProductsPage() {
     <div className="px-5 py-8 md:px-8">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-4xl font-bold text-brown tracking-tight">Products</h1>
-        <button onClick={() => { setEditProduct(undefined); setModal('add') }} className="md:hidden w-12 h-12 rounded-2xl border-2 border-brown flex items-center justify-center hover:bg-brown hover:text-white transition">
+        <button
+          onClick={() => { setEditProduct(undefined); setModal('add') }}
+          className="md:hidden w-12 h-12 rounded-2xl border-2 border-brown flex items-center justify-center hover:bg-brown hover:text-white transition"
+        >
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
         </button>
-        <button onClick={() => { setEditProduct(undefined); setModal('add') }} className="hidden md:flex items-center gap-2 border-2 border-brown text-brown font-semibold rounded-2xl px-5 py-2.5 text-sm hover:bg-brown hover:text-white transition">
+        <button
+          onClick={() => { setEditProduct(undefined); setModal('add') }}
+          className="hidden md:flex items-center gap-2 border-2 border-brown text-brown font-semibold rounded-2xl px-5 py-2.5 text-sm hover:bg-brown hover:text-white transition"
+        >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
           Add Products
         </button>
@@ -829,10 +966,14 @@ export default function AdminProductsPage() {
                           </div>
                         </td>
                         <td className="px-5 py-4">
-                          {p.audience ? <span className="text-xs bg-peach-light text-brown px-2 py-1 rounded-full capitalize">{p.audience}</span> : <span className="text-brown/30">—</span>}
+                          {p.audience
+                            ? <span className="text-xs bg-peach-light text-brown px-2 py-1 rounded-full capitalize">{p.audience}</span>
+                            : <span className="text-brown/30">—</span>}
                         </td>
                         <td className="px-5 py-4">
-                          {p.product_type ? <span className="text-xs bg-whitewash-off text-brown px-2 py-1 rounded-full capitalize">{p.product_type}</span> : <span className="text-brown/30">—</span>}
+                          {p.product_type
+                            ? <span className="text-xs bg-whitewash-off text-brown px-2 py-1 rounded-full capitalize">{p.product_type}</span>
+                            : <span className="text-brown/30">—</span>}
                         </td>
                         <td className="px-5 py-4 text-brown">{p.collections?.name ?? '—'}</td>
                         <td className="px-5 py-4 text-brown">{p.variants.length}</td>
