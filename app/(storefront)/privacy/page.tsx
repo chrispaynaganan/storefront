@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
-
-export const metadata: Metadata = {
-  title: 'Privacy Policy — Known & Worn',
-}
+import { privacyMetadata } from '@/lib/static-metadata'
+ 
+export const metadata = privacyMetadata
 
 export default function PrivacyPage() {
   return (

@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-
-export const metadata: Metadata = { title: 'Track Order — Known & Worn' }
+import { trackOrderMetadata } from '@/lib/static-metadata'
+ 
+export const metadata = trackOrderMetadata
 
 export default function TrackOrderPage() {
   return (

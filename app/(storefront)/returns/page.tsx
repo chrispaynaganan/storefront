@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { returnsMetadata } from '@/lib/static-metadata'
 
-export const metadata: Metadata = { title: 'Returns & Exchanges — Known & Worn' }
+export const metadata = returnsMetadata
 
 export default function ReturnsPage() {
   return (

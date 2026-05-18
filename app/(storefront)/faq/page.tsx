@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-
-export const metadata: Metadata = { title: 'FAQ — Known & Worn' }
+import { faqMetadata } from '@/lib/static-metadata'
+ 
+export const metadata = faqMetadata
 
 const FAQS = [
   {

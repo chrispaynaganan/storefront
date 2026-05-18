@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
-
-export const metadata: Metadata = { title: 'Materials — Known & Worn' }
+import { materialsMetadata } from '@/lib/static-metadata'
+ 
+export const metadata = materialsMetadata
 
 export default function MaterialsPage() {
   return (

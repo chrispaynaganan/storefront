@@ -1,13 +1,57 @@
 import { Suspense } from 'react'
+import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { ProductGrid } from '@/components/products/ProductGrid'
 import { ProductFilters } from '@/components/products/ProductFilters'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getFavoritedProductIds } from '@/lib/favorites'
-import { notFound } from 'next/navigation'
+import { SITE_NAME, canonical, metaDesc } from '@/lib/seo'
 
 interface Props {
   params: Promise<{ slug: string }>
   searchParams: Promise<{ sizes?: string; in_stock?: string; sort?: string }>
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params
+  const supabase = await createServerSupabaseClient()
+  const { data: collection } = await supabase
+    .from('collections')
+    .select('name, description, image_url')
+    .eq('slug', slug)
+    .single()
+
+  if (!collection) return { title: 'Collection Not Found' }
+
+  const title = `${collection.name} Collection — ${SITE_NAME}`
+  const description = metaDesc(
+    collection.description ??
+      `Shop the ${collection.name} collection from ${SITE_NAME}. Filipino streetwear made in the Philippines.`
+  )
+  const url = canonical(`/collections/${slug}`)
+
+  return {
+    title,
+    description,
+    keywords: [collection.name, 'Filipino streetwear', 'Philippines collection', SITE_NAME],
+    alternates: { canonical: url },
+    openGraph: {
+      type: 'website',
+      url,
+      title,
+      description,
+      siteName: SITE_NAME,
+      images: collection.image_url
+        ? [{ url: collection.image_url, width: 1200, height: 630, alt: collection.name }]
+        : undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: collection.image_url ? [collection.image_url] : undefined,
+    },
+  }
 }
 
 export default async function CollectionPage({ params, searchParams }: Props) {

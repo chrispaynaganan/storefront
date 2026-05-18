@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-
-export const metadata: Metadata = { title: 'Accessibility — Known & Worn' }
+import { accessibilityMetadata } from '@/lib/static-metadata'
+ 
+export const metadata = accessibilityMetadata
 
 export default function AccessibilityPage() {
   return (

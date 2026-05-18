@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
-
-export const metadata: Metadata = { title: 'Printing Process — Known & Worn' }
+import { printingMetadata } from '@/lib/static-metadata'
+ 
+export const metadata = printingMetadata
 
 export default function PrintingProcessPage() {
   return (

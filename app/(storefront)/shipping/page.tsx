@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
+import { shippingMetadata } from '@/lib/static-metadata'
+ 
+export const metadata = shippingMetadata
 
-export const metadata: Metadata = {
-  title: 'Shipping & Returns — Known & Worn',
-}
 
 export default function ShippingPage() {
   return (

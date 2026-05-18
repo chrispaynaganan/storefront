@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
-
-export const metadata: Metadata = {
-  title: 'Contact — Known & Worn',
-}
+import { contactMetadata } from '@/lib/static-metadata'
+ 
+export const metadata = contactMetadata
 
 export default function ContactPage() {
   return (

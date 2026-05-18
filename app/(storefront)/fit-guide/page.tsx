@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
+import { fitGuideMetadata } from '@/lib/static-metadata'
 
-export const metadata: Metadata = { title: 'Fit Guide — Known & Worn' }
+export const metadata = fitGuideMetadata
 
 const MEASUREMENTS = [
   { size: 'XS', chest: '34–36', waist: '28–30', hip: '34–36', length: '26' },

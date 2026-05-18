@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
-
-export const metadata: Metadata = {
-  title: 'Terms of Service — Known & Worn',
-}
+import { termsMetadata } from '@/lib/static-metadata'
+ 
+export const metadata = termsMetadata
 
 export default function TermsPage() {
   return (

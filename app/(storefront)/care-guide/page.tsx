@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
-
-export const metadata: Metadata = { title: 'Care Guide — Known & Worn' }
+import { careGuideMetadata } from '@/lib/static-metadata'
+ 
+export const metadata = careGuideMetadata
 
 const CARE_STEPS = [
   {

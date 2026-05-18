@@ -1,15 +1,16 @@
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { ProductImages } from '@/components/products/ProductImages'
 import { ProductPrice } from '@/components/products/ProductPrice'
 import { ProductBadge } from '@/components/products/ProductBadge'
 import { FavoriteButton } from '@/components/products/FavoriteButton'
 import { ShareButton } from '@/components/products/ShareButton'
 import { ReviewSection } from '@/components/products/ReviewSection'
+import { AddToCartButton } from '@/components/cart/AddToCartButton'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
 import { getFavoritedProductIds } from '@/lib/favorites'
-import { notFound } from 'next/navigation'
-import { AddToCartButton } from '@/components/cart/AddToCartButton'
-import type { Metadata } from 'next'
+import { SITE_NAME, SITE_URL, canonical, metaDesc, DEFAULT_KEYWORDS } from '@/lib/seo'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -30,28 +31,54 @@ async function getProduct(slug: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const product = await getProduct(slug)
-  if (!product) return {}
+  if (!product) return { title: 'Product Not Found' }
 
-  const lowestPrice = product.variants?.length
-    ? Math.min(...product.variants.map((v: any) => v.price))
-    : 0
   const image = product.image_urls?.[0]
+  const description = metaDesc(
+    product.description ?? `Shop ${product.name} at ${SITE_NAME}. Filipino streetwear made in the Philippines.`
+  )
+  const title = `${product.name} — ${SITE_NAME}`
+  const url = canonical(`/products/${slug}`)
+
+  const minPrice = product.variants?.length
+    ? Math.min(...product.variants.map((v: any) => v.price))
+    : null
+  const inStock = product.variants?.some((v: any) => v.stock_qty > 0)
 
   return {
-    title: `${product.name} | Known & Worn`,
-    description: product.description ?? `Shop ${product.name} at Known & Worn.`,
+    title,
+    description,
+    keywords: [
+      product.name,
+      product.product_type,
+      product.audience,
+      ...DEFAULT_KEYWORDS,
+    ].filter(Boolean),
+    alternates: { canonical: url },
     openGraph: {
-      title: product.name,
-      description: product.description ?? `Shop ${product.name} at Known & Worn.`,
-      images: image ? [{ url: image, width: 1200, height: 630, alt: product.name }] : [],
       type: 'website',
+      url,
+      title,
+      description,
+      siteName: SITE_NAME,
+      images: image
+        ? [{ url: image, width: 1200, height: 1200, alt: product.name }]
+        : undefined,
     },
     twitter: {
       card: 'summary_large_image',
-      title: product.name,
-      description: product.description ?? `Shop ${product.name} at Known & Worn.`,
-      images: image ? [image] : [],
+      title,
+      description,
+      images: image ? [image] : undefined,
     },
+    other: minPrice
+      ? {
+          'product:price:amount': String(minPrice),
+          'product:price:currency': 'PHP',
+          'product:availability': inStock ? 'in stock' : 'out of stock',
+          'product:brand': SITE_NAME,
+        }
+      : {},
   }
 }
 
@@ -86,28 +113,38 @@ export default async function ProductDetailPage({ params }: Props) {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: product.name,
-    description: product.description ?? '',
+    description: metaDesc(product.description ?? '', 300),
     image: product.image_urls ?? [],
-    brand: { '@type': 'Brand', name: 'Known & Worn' },
-    offers: product.variants?.map((v: any) => ({
-      '@type': 'Offer',
-      price: v.price,
-      priceCurrency: 'PHP',
-      availability: v.stock_qty > 0
-        ? 'https://schema.org/InStock'
-        : 'https://schema.org/OutOfStock',
-      sku: v.sku,
-    })),
+    brand: { '@type': 'Brand', name: SITE_NAME },
+    url: canonical(`/products/${slug}`),
+    offers: product.variants?.length
+      ? {
+          '@type': 'AggregateOffer',
+          priceCurrency: 'PHP',
+          lowPrice: Math.min(...product.variants.map((v: any) => v.price)),
+          highPrice: Math.max(...product.variants.map((v: any) => v.price)),
+          availability: product.variants.some((v: any) => v.stock_qty > 0)
+            ? 'https://schema.org/InStock'
+            : 'https://schema.org/OutOfStock',
+          seller: {
+            '@type': 'Organization',
+            name: SITE_NAME,
+            url: SITE_URL,
+          },
+        }
+      : undefined,
+    ...(product.is_bestseller && {
+      additionalProperty: {
+        '@type': 'PropertyValue',
+        name: 'isBestseller',
+        value: true,
+      },
+    }),
   }
 
-  // Favorite + Share actions — shared between image overlay (mobile) and info column (md+)
   const actions = (
     <div className="flex items-center gap-2">
-      <FavoriteButton
-        productId={product.id}
-        initialFavorited={isFavorited}
-        size="lg"
-      />
+      <FavoriteButton productId={product.id} initialFavorited={isFavorited} size="lg" />
       <ShareButton title={product.name} />
     </div>
   )
@@ -147,7 +184,7 @@ export default async function ProductDetailPage({ params }: Props) {
         {/* Main grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
 
-          {/* LEFT — images (actions overlay on mobile via prop) */}
+          {/* LEFT — images */}
           <ProductImages
             images={product.image_urls ?? []}
             name={product.name}
@@ -156,13 +193,10 @@ export default async function ProductDetailPage({ params }: Props) {
 
           {/* RIGHT — product info */}
           <div>
-
-            {/* Actions row — visible on md+, hidden on mobile (shown in image overlay) */}
             <div className="hidden md:flex justify-end mb-4">
               {actions}
             </div>
 
-            {/* Collection / category tags */}
             <div className="flex flex-wrap gap-2 mb-3">
               {product.collection && (
                 <Link
@@ -182,7 +216,6 @@ export default async function ProductDetailPage({ params }: Props) {
               ))}
             </div>
 
-            {/* Product name + badge */}
             <div className="flex items-start gap-3 flex-wrap">
               <h1 className="text-3xl font-semibold text-brown leading-tight">
                 {product.name}
@@ -190,7 +223,6 @@ export default async function ProductDetailPage({ params }: Props) {
               {product.is_bestseller && <ProductBadge label="Bestseller" />}
             </div>
 
-            {/* Price */}
             <ProductPrice
               price={lowestPrice}
               compareAtPrice={
@@ -198,7 +230,6 @@ export default async function ProductDetailPage({ params }: Props) {
               }
             />
 
-            {/* Variant selector + qty + CTAs + description — all in one client component */}
             <AddToCartButton
               variants={product.variants ?? []}
               productId={product.id}
@@ -213,7 +244,6 @@ export default async function ProductDetailPage({ params }: Props) {
           initialReviews={reviews ?? []}
           currentUserId={currentUser?.id ?? null}
         />
-
       </div>
     </>
   )

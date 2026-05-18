@@ -1,10 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { aboutMetadata } from '@/lib/static-metadata'
 
-export const metadata: Metadata = {
-  title: 'About — Known & Worn',
-  description: 'Known & Worn is built for everyday expression. Pieces you reach for without thinking, but still say exactly who you are.',
-}
+export { aboutMetadata as metadata }
 
 export default function AboutPage() {
   return (
