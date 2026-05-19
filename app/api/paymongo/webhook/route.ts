@@ -2,34 +2,57 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabaseClient } from '@/lib/supabase-server'
 import { logActivity } from '@/lib/activity-log'
 import { sendOrderConfirmationEmail } from '@/lib/email/order-confirmation'
-
-const PAYMONGO_WEBHOOK_SECRET = process.env.PAYMONGO_WEBHOOK_SECRET!
+import crypto from 'crypto'
 
 function verifyPaymongoSignature(rawBody: string, sigHeader: string): boolean {
-  const crypto = require('crypto')
+  const secret = process.env.PAYMONGO_WEBHOOK_SECRET
+  if (!secret) {
+    console.error('PayMongo webhook: PAYMONGO_WEBHOOK_SECRET is not set')
+    return false
+  }
 
+  // Parse the signature header: t=timestamp,te=test_sig,li=live_sig
   const parts: Record<string, string> = {}
   sigHeader.split(',').forEach((part) => {
-    const [k, v] = part.split('=')
-    parts[k.trim()] = v?.trim()
+    const eqIndex = part.indexOf('=')
+    if (eqIndex > -1) {
+      const k = part.slice(0, eqIndex).trim()
+      const v = part.slice(eqIndex + 1).trim()
+      parts[k] = v
+    }
   })
 
   const timestamp = parts['t']
-  const testSig = parts['te']
-  const liveSig = parts['li']
-  const sig = liveSig ?? testSig
+  // Use live sig if present, fall back to test sig
+  const sig = parts['li'] ?? parts['te']
 
-  if (!timestamp || !sig) return false
+  if (!timestamp || !sig) {
+    console.error('PayMongo webhook: missing timestamp or signature in header', { parts })
+    return false
+  }
 
   const signedPayload = `${timestamp}.${rawBody}`
   const expected = crypto
-    .createHmac('sha256', PAYMONGO_WEBHOOK_SECRET)
+    .createHmac('sha256', secret)
     .update(signedPayload)
     .digest('hex')
 
+  // Constant-time compare — both must be same length or timingSafeEqual throws
+  if (expected.length !== sig.length) {
+    console.error('PayMongo webhook: signature length mismatch', {
+      expectedLen: expected.length,
+      sigLen: sig.length,
+    })
+    return false
+  }
+
   try {
-    return crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(sig, 'hex'))
-  } catch {
+    return crypto.timingSafeEqual(
+      Buffer.from(expected, 'utf8'),
+      Buffer.from(sig, 'utf8')
+    )
+  } catch (err) {
+    console.error('PayMongo webhook: timingSafeEqual threw', err)
     return false
   }
 }
@@ -38,8 +61,10 @@ export async function POST(req: NextRequest) {
   const rawBody = await req.text()
   const sigHeader = req.headers.get('paymongo-signature') ?? ''
 
+  console.log('PayMongo webhook received, sig header:', sigHeader ? 'present' : 'MISSING')
+
   if (!verifyPaymongoSignature(rawBody, sigHeader)) {
-    console.warn('PayMongo webhook: invalid signature')
+    console.warn('PayMongo webhook: invalid signature — check PAYMONGO_WEBHOOK_SECRET in Vercel env vars')
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
@@ -52,6 +77,8 @@ export async function POST(req: NextRequest) {
 
   const eventType: string = event?.data?.attributes?.type ?? ''
   const eventData = event?.data?.attributes?.data
+
+  console.log('PayMongo webhook event type:', eventType)
 
   if (eventType !== 'source.chargeable') {
     return NextResponse.json({ received: true })
@@ -72,7 +99,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (pendingError || !pending) {
-    console.error('PayMongo webhook: pending checkout not found for source', sourceId)
+    console.error('PayMongo webhook: pending checkout not found for source', sourceId, pendingError)
     return NextResponse.json({ error: 'Pending checkout not found' }, { status: 404 })
   }
 
@@ -86,8 +113,7 @@ export async function POST(req: NextRequest) {
     // Fetch cart items
     const { data: cartItems, error: cartError } = await adminSupabase
       .from('cart_items')
-      .select(
-        `
+      .select(`
         id,
         qty,
         variant_id,
@@ -102,8 +128,7 @@ export async function POST(req: NextRequest) {
             image_urls
           )
         )
-      `
-      )
+      `)
       .eq('user_id', pending.user_id)
 
     if (cartError || !cartItems || cartItems.length === 0) {
@@ -202,7 +227,7 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (orderError || !order) {
-      throw new Error('Failed to create order')
+      throw new Error(`Failed to create order: ${JSON.stringify(orderError)}`)
     }
 
     // Create order items
@@ -228,7 +253,7 @@ export async function POST(req: NextRequest) {
       .update({ status: 'completed', order_id: order.id })
       .eq('source_id', sourceId)
 
-    // Send confirmation email with full shape
+    // Send confirmation email
     const { data: userProfile } = await adminSupabase
       .from('users')
       .select('email, first_name, full_name')
@@ -279,15 +304,18 @@ export async function POST(req: NextRequest) {
       metadata: { payment_method: pending.method, total: pending.total },
     })
 
+    console.log('PayMongo webhook: order created successfully', order.id)
     return NextResponse.json({ received: true, order_id: order.id })
   } catch (err: any) {
-    console.error('PayMongo webhook processing error:', err)
+    console.error('PayMongo webhook processing error:', err.message)
 
     await adminSupabase
       .from('pending_paymongo_checkouts')
       .update({ status: 'failed', error: err.message })
       .eq('source_id', sourceId)
 
+    // Still return 200 so PayMongo stops retrying for processing errors
+    // (signature errors above still return 401 to allow retries)
     return NextResponse.json({ received: true, error: err.message })
   }
 }
