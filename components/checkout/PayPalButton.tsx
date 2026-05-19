@@ -4,9 +4,10 @@ import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js'
 interface Props {
   amount: number
   onSuccess: (orderId: string) => void
+  onBeforeApprove?: () => Promise<boolean>
 }
 
-export function PayPalButton({ amount, onSuccess }: Props) {
+export function PayPalButton({ amount, onSuccess, onBeforeApprove }: Props) {
   return (
     <PayPalScriptProvider options={{
       clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!,
@@ -25,15 +26,15 @@ export function PayPalButton({ amount, onSuccess }: Props) {
           return data.id
         }}
         onApprove={async (data) => {
-          const res = await fetch('/api/paypal/capture-order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId: data.orderID }),
-          })
-          const capture = await res.json()
-          if (capture.status === 'COMPLETED') {
-            onSuccess(data.orderID)
+          // Run stock check before proceeding
+          if (onBeforeApprove) {
+            const ok = await onBeforeApprove()
+            if (!ok) return
           }
+
+          // Pass orderID to CheckoutClient which calls our capture route
+          // Do NOT capture here — /api/orders/capture handles it server-side
+          onSuccess(data.orderID)
         }}
       />
     </PayPalScriptProvider>

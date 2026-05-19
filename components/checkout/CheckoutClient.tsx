@@ -4,9 +4,9 @@ import { useRouter } from 'next/navigation'
 import { Input } from '@/components/ui/Input'
 import { PayPalButton } from './PayPalButton'
 import { PromoCodeInput } from '@/components/cart/PromoCodeInput'
-import { createClient } from '@/lib/supabase'
 import { formatPrice } from '@/lib/utils'
 import { useCart } from '@/context/CartContext'
+import { validateCartStock } from '@/lib/stock'
 import Image from 'next/image'
 
 interface Props {
@@ -26,6 +26,8 @@ export function CheckoutClient({ cartItems, subtotal, userId }: Props) {
   const [discount, setDiscount] = useState(0)
   const [promoCode, setPromoCode] = useState('')
   const [error, setError] = useState('')
+  const [stockError, setStockError] = useState<string[]>([])
+  const [loading, setLoading] = useState(false)
 
   const total = Math.max(0, subtotal - discount)
 
@@ -41,55 +43,63 @@ export function CheckoutClient({ cartItems, subtotal, userId }: Props) {
     setPromoCode(code)
   }
 
+  // Called by PayPalButton after PayPal payment is approved
   async function handlePaymentSuccess(paypalOrderId: string) {
-    const supabase = createClient()
+    setLoading(true)
+    setError('')
+    setStockError([])
 
-    const { data: address } = await supabase
-      .from('addresses')
-      .insert({ user_id: userId, ...form, is_default: false })
-      .select()
-      .single()
-
-    if (!address) { setError('Failed to save address'); return }
-
-    const { data: order } = await supabase
-      .from('orders')
-      .insert({
-        user_id: userId,
-        address_id: address.id,
-        status: 'paid',
-        subtotal,
-        discount,
-        total,
-        currency: 'PHP',
-        paypal_order_id: paypalOrderId,
+    try {
+      // POST to capture route — handles address save, stock, order creation, email
+      const res = await fetch('/api/orders/capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paypal_order_id: paypalOrderId,
+          address: form,
+          promo_code: promoCode || undefined,
+        }),
       })
-      .select()
-      .single()
 
-    if (!order) { setError('Failed to create order'); return }
+      const result = await res.json()
 
-    await supabase.from('order_items').insert(
-      cartItems.map(item => ({
-        order_id: order.id,
-        variant_id: item.variant_id,
-        qty: item.qty,
-        unit_price: item.variant?.price ?? 0,
-        line_total: (item.variant?.price ?? 0) * item.qty,
-      }))
-    )
+      if (!res.ok) {
+        // Out-of-stock error — show which items
+        if (res.status === 409 && result.out_of_stock) {
+          setStockError(result.out_of_stock)
+          setError('Some items in your cart ran out of stock while you were checking out.')
+          setLoading(false)
+          return
+        }
+        setError(result.error ?? 'Something went wrong. Please contact support.')
+        setLoading(false)
+        return
+      }
 
-    for (const item of cartItems) {
-      await supabase.rpc('decrement_stock', {
-        p_variant_id: item.variant_id,
-        p_qty: item.qty,
-      })
+      // 3. Refresh cart context then redirect
+      await refreshCart()
+      router.push(`/order/${result.order_id}`)
+
+    } catch (err: any) {
+      console.error('[Checkout] Unexpected error:', err)
+      setError('Something went wrong. Your payment may have been processed — please contact support.')
+      setLoading(false)
     }
+  }
 
-    await supabase.from('cart_items').delete().eq('user_id', userId)
-    await refreshCart()
-
-    router.push(`/order/${order.id}`)
+  // Validate stock before PayPal button becomes active
+  async function handleBeforePayPal(): Promise<boolean> {
+    const stockValidation = await validateCartStock(
+      cartItems.map(i => ({ variant_id: i.variant_id, qty: i.qty }))
+    )
+    if (!stockValidation.valid) {
+      setStockError(stockValidation.outOfStock.map(i =>
+        `${i.productName} (only ${i.availableQty} left)`
+      ))
+      return false
+    }
+    setStockError([])
+    return true
   }
 
   return (
@@ -161,14 +171,36 @@ export function CheckoutClient({ cartItems, subtotal, userId }: Props) {
 
           <div className="bg-white rounded-xl border border-peach-light p-5">
             <h2 className="text-lg font-medium text-brown mb-4">Payment</h2>
+
+            {/* Stock errors */}
+            {stockError.length > 0 && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm font-medium text-red-700 mb-1">Some items are no longer available:</p>
+                <ul className="text-sm text-red-600 list-disc list-inside">
+                  {stockError.map((name, i) => <li key={i}>{name}</li>)}
+                </ul>
+              </div>
+            )}
+
             {!formReady ? (
               <p className="text-sm text-brown-light text-center py-4">
                 Fill in your shipping details to continue
               </p>
+            ) : loading ? (
+              <div className="text-center py-6">
+                <p className="text-sm text-brown-light">Processing your order…</p>
+              </div>
             ) : (
-              <PayPalButton amount={total} onSuccess={handlePaymentSuccess} />
+              <PayPalButton
+                amount={total}
+                onSuccess={handlePaymentSuccess}
+                onBeforeApprove={handleBeforePayPal}
+              />
             )}
-            {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
+
+            {error && (
+              <p className="text-sm text-red-500 mt-3">{error}</p>
+            )}
           </div>
         </div>
 
