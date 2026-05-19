@@ -1,6 +1,8 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 export interface OrderConfirmationItem {
   name: string;
@@ -227,7 +229,7 @@ export async function sendOrderConfirmationEmail(
   data: OrderConfirmationData
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await resend.emails.send({
+    const { error } = await getResend().emails.send({
       from: "Known & Worn <orders@knownandworn.com>",
       to: data.customer_email,
       subject: `Order confirmed — #${data.order_id.slice(0, 8).toUpperCase()}`,
