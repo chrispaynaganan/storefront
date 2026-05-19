@@ -9,20 +9,13 @@ type Status = 'checking' | 'success' | 'failed' | 'timeout'
 export default function CheckoutReturnPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const sourceId = searchParams.get('source_id')
-  const urlStatus = searchParams.get('status') // 'success' | 'failed' from PayMongo redirect
+  const urlStatus = searchParams.get('status')
 
   const [status, setStatus] = useState<Status>('checking')
   const [attempts, setAttempts] = useState(0)
-  const MAX_ATTEMPTS = 15 // 15 × 2s = 30s max
+  const MAX_ATTEMPTS = 15
 
   useEffect(() => {
-    if (!sourceId) {
-      setStatus('failed')
-      return
-    }
-
-    // If PayMongo told us it failed immediately, no need to poll
     if (urlStatus === 'failed') {
       setStatus('failed')
       return
@@ -31,16 +24,17 @@ export default function CheckoutReturnPage() {
     const poll = async () => {
       try {
         const supabase = createClient()
+
+        // Find the most recent processing/completed checkout for this user
         const { data, error } = await supabase
           .from('pending_paymongo_checkouts')
           .select('status, order_id')
-          .eq('source_id', sourceId)
+          .in('status', ['pending', 'processing', 'completed'])
+          .order('created_at', { ascending: false })
+          .limit(1)
           .single()
 
-        if (error || !data) {
-          // Row doesn't exist yet — keep polling
-          return false
-        }
+        if (error || !data) return false
 
         if (data.status === 'completed' && data.order_id) {
           router.replace(`/order/${data.order_id}`)
@@ -52,12 +46,14 @@ export default function CheckoutReturnPage() {
           return true
         }
 
-        // pending or processing — keep polling
         return false
       } catch {
         return false
       }
     }
+
+    // Run immediately
+    poll()
 
     const interval = setInterval(async () => {
       setAttempts((prev) => {
@@ -73,11 +69,8 @@ export default function CheckoutReturnPage() {
       if (done) clearInterval(interval)
     }, 2000)
 
-    // Run immediately on mount too
-    poll()
-
     return () => clearInterval(interval)
-  }, [sourceId, urlStatus, router])
+  }, [urlStatus, router])
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-whitewash px-4 text-center">

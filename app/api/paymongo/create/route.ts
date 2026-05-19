@@ -115,9 +115,9 @@ export async function POST(req: NextRequest) {
     const sourceType = method === 'gcash' ? 'gcash' : 'paymaya'
     const amountInCentavos = Math.round(total * 100)
 
-    // Build redirect URLs — PayMongo replaces {id} with the actual source id
-    const successUrl = `${SITE_URL}/checkout/return?source_id={id}&status=success`
-    const failedUrl = `${SITE_URL}/checkout/return?source_id={id}&status=failed`
+    // Build redirect URLs
+    const successUrl = `${SITE_URL}/checkout/return?status=success`
+    const failedUrl = `${SITE_URL}/checkout/return?status=failed`
 
     const sourcePayload = {
       data: {
