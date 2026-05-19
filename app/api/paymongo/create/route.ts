@@ -45,20 +45,16 @@ export async function POST(req: NextRequest) {
     // Fetch cart items with variant + product info
     const { data: cartItems, error: cartError } = await supabase
       .from('cart_items')
-      .select(
-        `
+      .select(`
         id,
         qty,
         variant:variants(
           id,
           price,
           stock_qty,
-          size,
-          color,
           product:products(name)
         )
-      `
-      )
+      `)
       .eq('user_id', user.id)
 
     if (cartError || !cartItems || cartItems.length === 0) {
@@ -86,13 +82,14 @@ export async function POST(req: NextRequest) {
     // Resolve promo discount
     let discount = 0
     if (promo_code) {
+      const now = new Date().toISOString()
       const { data: promo } = await supabase
         .from('promos')
         .select('*')
         .eq('code', promo_code.toUpperCase())
         .eq('is_active', true)
-        .lte('starts_at', new Date().toISOString())
-        .gte('ends_at', new Date().toISOString())
+        .lte('starts_at', now)
+        .gte('ends_at', now)
         .single()
 
       if (promo) {
@@ -105,7 +102,7 @@ export async function POST(req: NextRequest) {
 
     const total = subtotal - discount
 
-    // Build line items description
+    // Build description
     const description = cartItems
       .map((item) => {
         const v = item.variant as any
@@ -113,57 +110,65 @@ export async function POST(req: NextRequest) {
       })
       .join(', ')
 
-    // Store pending intent data in Supabase so webhook can resume it
-    // We store as metadata on a temp record keyed by source_id after creation
-    // For now, stash address + cart snapshot in a temp key we'll read in webhook
-
-    // Create PayMongo Source
+    // PayMongo source type — gcash stays 'gcash', Maya uses 'paymaya' (legacy) or 'maya'
+    // PayMongo currently accepts both; 'gcash' and 'paymaya' are the stable values
     const sourceType = method === 'gcash' ? 'gcash' : 'paymaya'
     const amountInCentavos = Math.round(total * 100)
+
+    // Build redirect URLs — PayMongo replaces {id} with the actual source id
+    const successUrl = `${SITE_URL}/checkout/return?source_id={id}&status=success`
+    const failedUrl = `${SITE_URL}/checkout/return?source_id={id}&status=failed`
+
+    const sourcePayload = {
+      data: {
+        attributes: {
+          amount: amountInCentavos,
+          currency: 'PHP',
+          type: sourceType,
+          redirect: {
+            success: successUrl,
+            failed: failedUrl,
+          },
+          billing: {
+            name: user.email,
+            email: user.email,
+            address: {
+              line1: address.line1,
+              line2: address.line2 ?? '',
+              city: address.city,
+              state: address.province,
+              country: 'PH',
+              postal_code: address.postal_code,
+            },
+          },
+          description,
+        },
+      },
+    }
 
     const sourceRes = await fetch(`${PAYMONGO_BASE}/sources`, {
       method: 'POST',
       headers: paymongoHeaders(),
-      body: JSON.stringify({
-        data: {
-          attributes: {
-            amount: amountInCentavos,
-            currency: 'PHP',
-            type: sourceType,
-            redirect: {
-              success: `${SITE_URL}/checkout/return?source_id={id}&status=success`,
-              failed: `${SITE_URL}/checkout/return?source_id={id}&status=failed`,
-            },
-            billing: {
-              name: user.email,
-              email: user.email,
-              address: {
-                line1: address.line1,
-                line2: address.line2 ?? '',
-                city: address.city,
-                state: address.province,
-                country: address.country || 'PH',
-                postal_code: address.postal_code,
-              },
-            },
-            description,
-          },
-        },
-      }),
+      body: JSON.stringify(sourcePayload),
     })
 
+    const sourceJson = await sourceRes.json()
+
     if (!sourceRes.ok) {
-      const err = await sourceRes.json()
-      console.error('PayMongo source error:', err)
-      return NextResponse.json({ error: 'Failed to create payment source' }, { status: 500 })
+      console.error('PayMongo source error:', JSON.stringify(sourceJson, null, 2))
+      const paymongoMsg = sourceJson?.errors?.[0]?.detail ?? 'Failed to create payment source'
+      return NextResponse.json({ error: paymongoMsg }, { status: 500 })
     }
 
-    const sourceData = await sourceRes.json()
-    const source = sourceData.data
-    const sourceId = source.id
-    const checkoutUrl = source.attributes.redirect.checkout_url
+    const sourceId: string = sourceJson.data.id
+    const checkoutUrl: string = sourceJson.data.attributes.redirect.checkout_url
 
-    // Persist a pending_paymongo_checkout record so webhook can find cart + address
+    if (!checkoutUrl) {
+      console.error('PayMongo: no checkout_url in response', sourceJson)
+      return NextResponse.json({ error: 'No checkout URL returned from PayMongo' }, { status: 500 })
+    }
+
+    // Save pending checkout so webhook can resume
     const { error: insertError } = await supabase.from('pending_paymongo_checkouts').insert({
       source_id: sourceId,
       user_id: user.id,
