@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase-server'
 
 const PAYMONGO_SECRET = process.env.PAYMONGO_SECRET_KEY!
 const PAYMONGO_BASE = 'https://api.paymongo.com/v1'
@@ -156,8 +156,7 @@ export async function POST(req: NextRequest) {
 
     if (!sourceRes.ok) {
       console.error('PayMongo source error:', JSON.stringify(sourceJson, null, 2))
-      const paymongoMsg = sourceJson?.errors?.[0]?.detail ?? 'Failed to create payment source'
-      return NextResponse.json({ error: paymongoMsg }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to create payment source' }, { status: 500 })
     }
 
     const sourceId: string = sourceJson.data.id
@@ -169,7 +168,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Save pending checkout so webhook can resume
-    const { error: insertError } = await supabase.from('pending_paymongo_checkouts').insert({
+    const adminSupabase = await createAdminSupabaseClient()
+    const { error: insertError } = await adminSupabase.from('pending_paymongo_checkouts').insert({
       source_id: sourceId,
       user_id: user.id,
       address,
