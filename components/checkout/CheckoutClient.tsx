@@ -452,6 +452,7 @@ export default function CheckoutClient({
             <CardForm
               intentId={cardIntentId}
               clientKey={cardClientKey}
+              userEmail={userEmail}
               onSuccess={handleCardSuccess}
               onError={(msg) => setError(msg)}
               loading={loading}

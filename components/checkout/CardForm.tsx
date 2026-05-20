@@ -6,22 +6,17 @@ import clsx from 'clsx'
 interface CardFormProps {
   intentId: string
   clientKey: string
+  userEmail: string
   onSuccess: (intentId: string) => void
   onError: (msg: string) => void
   loading: boolean
   setLoading: (v: boolean) => void
 }
 
-// Format card number with spaces every 4 digits
 function formatCardNumber(value: string): string {
-  return value
-    .replace(/\D/g, '')
-    .slice(0, 16)
-    .replace(/(.{4})/g, '$1 ')
-    .trim()
+  return value.replace(/\D/g, '').slice(0, 16).replace(/(.{4})/g, '$1 ').trim()
 }
 
-// Format expiry as MM/YY
 function formatExpiry(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 4)
   if (digits.length >= 3) return `${digits.slice(0, 2)}/${digits.slice(2)}`
@@ -62,6 +57,7 @@ function CardBrandIcon({ brand }: { brand: string }) {
 export default function CardForm({
   intentId,
   clientKey,
+  userEmail,
   onSuccess,
   onError,
   loading,
@@ -95,10 +91,10 @@ export default function CardForm({
       const [expMonth, expYear] = expiry.split('/')
       const rawNumber = cardNumber.replace(/\s/g, '')
 
-      // Tokenize card via PayMongo public key
       const publicKey = process.env.NEXT_PUBLIC_PAYMONGO_PUBLIC_KEY!
       const encodedPublic = btoa(`${publicKey}:`)
 
+      // Tokenize card with billing email
       const pmRes = await fetch('https://api.paymongo.com/v1/payment_methods', {
         method: 'POST',
         headers: {
@@ -117,6 +113,7 @@ export default function CardForm({
               },
               billing: {
                 name: cardName,
+                email: userEmail,
               },
             },
           },
@@ -150,7 +147,6 @@ export default function CardForm({
       }
 
       if (attachData.status === '3ds_required') {
-        // Redirect to 3DS page — return URL will bring them back
         window.location.href = attachData.redirect_url
         return
       }
@@ -178,7 +174,6 @@ export default function CardForm({
 
   return (
     <div className="space-y-3 pt-1">
-      {/* Card number */}
       <div>
         <div className="relative">
           <input
@@ -199,7 +194,6 @@ export default function CardForm({
         )}
       </div>
 
-      {/* Expiry + CVC */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <input
@@ -231,7 +225,6 @@ export default function CardForm({
         </div>
       </div>
 
-      {/* Name on card */}
       <div>
         <input
           type="text"
@@ -245,7 +238,6 @@ export default function CardForm({
         )}
       </div>
 
-      {/* Secure note */}
       <p className="flex items-center gap-1.5 text-xs text-brown/40">
         <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
@@ -253,7 +245,6 @@ export default function CardForm({
         Secured by PayMongo · 256-bit SSL
       </p>
 
-      {/* Submit */}
       <button
         onClick={handleSubmit}
         disabled={loading}
