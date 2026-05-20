@@ -11,9 +11,6 @@ function verifyPaymongoSignature(rawBody: string, sigHeader: string): boolean {
     return false
   }
 
-  console.log('Webhook secret prefix:', secret.slice(0, 8))
-  console.log('Sig header received:', sigHeader)
-
   const parts: Record<string, string> = {}
   sigHeader.split(',').forEach((part) => {
     const eqIndex = part.indexOf('=')
@@ -27,7 +24,8 @@ function verifyPaymongoSignature(rawBody: string, sigHeader: string): boolean {
   const timestamp = parts['t']
   const sig = parts['li'] ?? parts['te']
 
-  console.log('Parsed timestamp:', timestamp, '| sig prefix:', sig?.slice(0, 8))
+  console.log('Webhook secret prefix:', secret.slice(0, 8))
+  console.log('Parsed sig prefix:', sig?.slice(0, 8), '| timestamp:', timestamp)
 
   if (!timestamp || !sig) {
     console.error('Missing timestamp or sig in header')
@@ -40,8 +38,7 @@ function verifyPaymongoSignature(rawBody: string, sigHeader: string): boolean {
     .update(signedPayload)
     .digest('hex')
 
-  console.log('Expected prefix:', expected.slice(0, 8), '| Received prefix:', sig.slice(0, 8))
-  console.log('Lengths — expected:', expected.length, '| received:', sig.length)
+  console.log('Expected prefix:', expected.slice(0, 8), '| lengths:', expected.length, sig.length)
 
   if (expected.length !== sig.length) {
     console.error('Signature length mismatch')
@@ -49,59 +46,20 @@ function verifyPaymongoSignature(rawBody: string, sigHeader: string): boolean {
   }
 
   try {
-    const result = crypto.timingSafeEqual(
-      Buffer.from(expected, 'utf8'),
-      Buffer.from(sig, 'utf8')
-    )
-    console.log('Signature match:', result)
-    return result
+    return crypto.timingSafeEqual(Buffer.from(expected, 'utf8'), Buffer.from(sig, 'utf8'))
   } catch (err) {
     console.error('timingSafeEqual threw:', err)
     return false
   }
 }
 
-export async function POST(req: NextRequest) {
-  const rawBody = await req.text()
-  const sigHeader = req.headers.get('paymongo-signature') ?? ''
+// ── Shared order creation logic ───────────────────────────────────────────────
 
-  console.log('=== PayMongo webhook hit ===')
-  console.log('Sig header present:', !!sigHeader)
-
-  // TEMPORARY: set PAYMONGO_SKIP_SIG_CHECK=true in Vercel to bypass sig check for debugging
-  const SKIP_SIG = process.env.PAYMONGO_SKIP_SIG_CHECK === 'true'
-
-  if (!SKIP_SIG && !verifyPaymongoSignature(rawBody, sigHeader)) {
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
-  }
-
-  if (SKIP_SIG) {
-    console.warn('⚠️  Signature check SKIPPED — debug mode active')
-  }
-
-  let event: any
-  try {
-    event = JSON.parse(rawBody)
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-  }
-
-  const eventType: string = event?.data?.attributes?.type ?? ''
-  const eventData = event?.data?.attributes?.data
-
-  console.log('Event type:', eventType)
-
-  if (eventType !== 'source.chargeable') {
-    return NextResponse.json({ received: true })
-  }
-
-  const sourceId: string = eventData?.id
-  if (!sourceId) {
-    return NextResponse.json({ error: 'Missing source id' }, { status: 400 })
-  }
-
-  const adminSupabase = await createAdminSupabaseClient()
-
+async function processOrder(
+  adminSupabase: any,
+  sourceId: string,
+  paymongoPaymentId: string
+) {
   const { data: pending, error: pendingError } = await adminSupabase
     .from('pending_paymongo_checkouts')
     .select('*')
@@ -110,10 +68,11 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (pendingError || !pending) {
-    console.error('Pending checkout not found for source', sourceId, pendingError)
-    return NextResponse.json({ error: 'Pending checkout not found' }, { status: 404 })
+    console.error('Pending checkout not found for source/intent', sourceId)
+    return
   }
 
+  // Idempotency guard
   await adminSupabase
     .from('pending_paymongo_checkouts')
     .update({ status: 'processing' })
@@ -144,42 +103,8 @@ export async function POST(req: NextRequest) {
       throw new Error('Cart is empty at webhook time')
     }
 
-    const PAYMONGO_SECRET = process.env.PAYMONGO_SECRET_KEY!
-    const encoded = Buffer.from(`${PAYMONGO_SECRET}:`).toString('base64')
-    const pmHeaders = {
-      'Content-Type': 'application/json',
-      Authorization: `Basic ${encoded}`,
-    }
-
-    const paymentRes = await fetch('https://api.paymongo.com/v1/payments', {
-      method: 'POST',
-      headers: pmHeaders,
-      body: JSON.stringify({
-        data: {
-          attributes: {
-            amount: Math.round(pending.total * 100),
-            currency: 'PHP',
-            source: { id: sourceId, type: 'source' },
-            description: `Known & Worn order`,
-          },
-        },
-      }),
-    })
-
-    if (!paymentRes.ok) {
-      const err = await paymentRes.json()
-      throw new Error(`PayMongo payment creation failed: ${JSON.stringify(err)}`)
-    }
-
-    const paymentData = await paymentRes.json()
-    const paymongoPaymentId: string = paymentData.data.id
-    const paymentStatus: string = paymentData.data.attributes.status
-
-    if (paymentStatus !== 'paid') {
-      throw new Error(`Payment status is ${paymentStatus}, expected paid`)
-    }
-
-    const stockItems = cartItems.map((ci) => ({
+    // Decrement stock atomically
+    const stockItems = cartItems.map((ci: any) => ({
       variant_id: ci.variant_id,
       qty: ci.qty,
     }))
@@ -193,6 +118,7 @@ export async function POST(req: NextRequest) {
       throw new Error('Stock decrement failed — insufficient stock')
     }
 
+    // Save address
     const addr = pending.address
     const { data: savedAddress, error: addrError } = await adminSupabase
       .from('addresses')
@@ -213,6 +139,7 @@ export async function POST(req: NextRequest) {
       throw new Error('Failed to save address')
     }
 
+    // Create order
     const { data: order, error: orderError } = await adminSupabase
       .from('orders')
       .insert({
@@ -235,7 +162,8 @@ export async function POST(req: NextRequest) {
       throw new Error(`Failed to create order: ${JSON.stringify(orderError)}`)
     }
 
-    const orderItems = cartItems.map((ci) => {
+    // Create order items
+    const orderItems = cartItems.map((ci: any) => {
       const variant = ci.variant as any
       return {
         order_id: order.id,
@@ -249,11 +177,13 @@ export async function POST(req: NextRequest) {
     await adminSupabase.from('order_items').insert(orderItems)
     await adminSupabase.from('cart_items').delete().eq('user_id', pending.user_id)
 
+    // Mark completed
     await adminSupabase
       .from('pending_paymongo_checkouts')
       .update({ status: 'completed', order_id: order.id })
       .eq('source_id', sourceId)
 
+    // Send confirmation email
     const { data: userProfile } = await adminSupabase
       .from('users')
       .select('email, first_name, full_name')
@@ -278,7 +208,7 @@ export async function POST(req: NextRequest) {
           postal_code: addr.postal_code,
           country: addr.country || 'PH',
         },
-        items: cartItems.map((ci) => {
+        items: cartItems.map((ci: any) => {
           const variant = ci.variant as any
           const imageUrls: string[] = variant?.product?.image_urls ?? []
           return {
@@ -305,15 +235,125 @@ export async function POST(req: NextRequest) {
     })
 
     console.log('✅ Order created successfully:', order.id)
-    return NextResponse.json({ received: true, order_id: order.id })
   } catch (err: any) {
     console.error('❌ Webhook processing error:', err.message)
-
     await adminSupabase
       .from('pending_paymongo_checkouts')
       .update({ status: 'failed', error: err.message })
       .eq('source_id', sourceId)
-
-    return NextResponse.json({ received: true, error: err.message })
   }
+}
+
+// ── Main handler ──────────────────────────────────────────────────────────────
+
+export async function POST(req: NextRequest) {
+  const rawBody = await req.text()
+  const sigHeader = req.headers.get('paymongo-signature') ?? ''
+
+  console.log('=== PayMongo webhook hit ===')
+
+  const SKIP_SIG = process.env.PAYMONGO_SKIP_SIG_CHECK === 'true'
+
+  if (!SKIP_SIG && !verifyPaymongoSignature(rawBody, sigHeader)) {
+    console.warn('PayMongo webhook: invalid signature')
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+  }
+
+  if (SKIP_SIG) {
+    console.warn('⚠️  Signature check SKIPPED — debug mode')
+  }
+
+  let event: any
+  try {
+    event = JSON.parse(rawBody)
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
+
+  const eventType: string = event?.data?.attributes?.type ?? ''
+  const eventData = event?.data?.attributes?.data
+
+  console.log('Event type:', eventType)
+
+  const adminSupabase = await createAdminSupabaseClient()
+
+  // ── GCash / Maya: source.chargeable ──────────────────────────────────────
+  if (eventType === 'source.chargeable') {
+    const sourceId: string = eventData?.id
+    if (!sourceId) {
+      return NextResponse.json({ error: 'Missing source id' }, { status: 400 })
+    }
+
+    // Get pending to know the amount
+    const { data: pending } = await adminSupabase
+      .from('pending_paymongo_checkouts')
+      .select('total')
+      .eq('source_id', sourceId)
+      .eq('status', 'pending')
+      .single()
+
+    if (!pending) {
+      console.error('No pending checkout for source', sourceId)
+      return NextResponse.json({ error: 'Pending checkout not found' }, { status: 404 })
+    }
+
+    // Create payment from source
+    const PAYMONGO_SECRET = process.env.PAYMONGO_SECRET_KEY!
+    const encoded = Buffer.from(`${PAYMONGO_SECRET}:`).toString('base64')
+    const pmHeaders = {
+      'Content-Type': 'application/json',
+      Authorization: `Basic ${encoded}`,
+    }
+
+    const paymentRes = await fetch('https://api.paymongo.com/v1/payments', {
+      method: 'POST',
+      headers: pmHeaders,
+      body: JSON.stringify({
+        data: {
+          attributes: {
+            amount: Math.round(pending.total * 100),
+            currency: 'PHP',
+            source: { id: sourceId, type: 'source' },
+            description: 'Known & Worn order',
+          },
+        },
+      }),
+    })
+
+    if (!paymentRes.ok) {
+      const err = await paymentRes.json()
+      console.error('PayMongo payment creation failed:', JSON.stringify(err))
+      return NextResponse.json({ received: true, error: 'Payment creation failed' })
+    }
+
+    const paymentData = await paymentRes.json()
+    const paymongoPaymentId: string = paymentData.data.id
+    const paymentStatus: string = paymentData.data.attributes.status
+
+    if (paymentStatus !== 'paid') {
+      console.error('Payment not paid, status:', paymentStatus)
+      return NextResponse.json({ received: true })
+    }
+
+    await processOrder(adminSupabase, sourceId, paymongoPaymentId)
+    return NextResponse.json({ received: true })
+  }
+
+  // ── Card: payment.paid ────────────────────────────────────────────────────
+  if (eventType === 'payment.paid') {
+    const paymongoPaymentId: string = eventData?.id
+    const intentId: string = eventData?.attributes?.payment_intent_id
+
+    if (!intentId) {
+      console.error('payment.paid event missing payment_intent_id')
+      return NextResponse.json({ error: 'Missing intent id' }, { status: 400 })
+    }
+
+    console.log('Card payment paid, intent:', intentId, 'payment:', paymongoPaymentId)
+    await processOrder(adminSupabase, intentId, paymongoPaymentId)
+    return NextResponse.json({ received: true })
+  }
+
+  // Unhandled — acknowledge and ignore
+  return NextResponse.json({ received: true })
 }
