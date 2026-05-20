@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
 
     // PayMongo source type — gcash stays 'gcash', Maya uses 'paymaya' (legacy) or 'maya'
     // PayMongo currently accepts both; 'gcash' and 'paymaya' are the stable values
-    const sourceType = method === 'gcash' ? 'gcash' : 'maya'
+    const sourceType = method === 'gcash' ? 'gcash' : 'paymaya'
     const amountInCentavos = Math.round(total * 100)
 
     // Build redirect URLs
