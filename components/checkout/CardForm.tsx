@@ -151,8 +151,8 @@ export default function CardForm({
         return
       }
 
-      if (attachData.status === 'succeeded') {
-        onSuccess(intentId)
+      if (attachData.status === 'succeeded' && attachData.order_id) {
+        window.location.href = `/order/${attachData.order_id}`
         return
       }
 
