@@ -5,8 +5,9 @@ import AdminOrderDetail from '@/components/admin/AdminOrderDetail'
 export default async function AdminOrderDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) notFound()
@@ -51,7 +52,7 @@ export default async function AdminOrderDetailPage({
         )
       )
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (!order) notFound()

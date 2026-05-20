@@ -4,8 +4,9 @@ import { logActivity } from '@/lib/activity-log'
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -30,7 +31,7 @@ export async function PATCH(
     const { data: current } = await adminSupabase
       .from('orders')
       .select('status, courier, tracking_number')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (!current) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
@@ -44,7 +45,7 @@ export async function PATCH(
     const { error } = await adminSupabase
       .from('orders')
       .update(updates)
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (error) {
       console.error('Order update error:', error)
@@ -58,8 +59,8 @@ export async function PATCH(
       userRole: profile.role,
       action: 'order_updated',
       entity: 'orders',
-      entityId: params.id,
-      entityName: `Order #${params.id.slice(0, 8)}`,
+      entityId: id,
+      entityName: `Order #${id.slice(0, 8)}`,
       changes: Object.fromEntries(
         Object.keys(updates).map((key) => [
           key,

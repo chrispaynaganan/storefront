@@ -6,8 +6,9 @@ const CANCELLABLE_STATUSES = ['paid', 'packed']
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -21,7 +22,7 @@ export async function POST(
     const { data: order } = await adminSupabase
       .from('orders')
       .select('id, user_id, status, total, payment_method')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
@@ -41,7 +42,7 @@ export async function POST(
         cancellation_reason: reason,
         cancelled_at: new Date().toISOString(),
       })
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (cancelError) return NextResponse.json({ error: 'Failed to cancel order' }, { status: 500 })
 
@@ -49,7 +50,7 @@ export async function POST(
     const { data: orderItems } = await adminSupabase
       .from('order_items')
       .select('variant_id, qty')
-      .eq('order_id', params.id)
+      .eq('order_id', id)
 
     if (orderItems) {
       for (const item of orderItems) {
@@ -71,8 +72,8 @@ export async function POST(
       userId: user.id,
       action: 'order_cancelled',
       entity: 'orders',
-      entityId: params.id,
-      entityName: `Order #${params.id.slice(0, 8)}`,
+      entityId: id,
+      entityName: `Order #${id.slice(0, 8)}`,
       metadata: { reason, total: order.total, payment_method: order.payment_method },
     })
 

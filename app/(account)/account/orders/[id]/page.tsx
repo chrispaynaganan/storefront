@@ -5,8 +5,9 @@ import CustomerOrderDetail from '@/components/account/CustomerOrderDetail'
 export default async function CustomerOrderDetailPage({
   params,
 }: {
-  params: { id: string }
+  params: Promise<{ id: string }>
 }) {
+  const { id } = await params
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -46,7 +47,7 @@ export default async function CustomerOrderDetailPage({
         )
       )
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('user_id', user.id)
     .single()
 

@@ -4,8 +4,9 @@ import { logActivity } from '@/lib/activity-log'
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const supabase = await createServerSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -23,7 +24,7 @@ export async function POST(
     const { data: order } = await adminSupabase
       .from('orders')
       .select('id, user_id, status, total')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
@@ -43,7 +44,7 @@ export async function POST(
         return_reason: reason,
         return_requested_at: new Date().toISOString(),
       })
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (error) return NextResponse.json({ error: 'Failed to submit return request' }, { status: 500 })
 
@@ -51,8 +52,8 @@ export async function POST(
       userId: user.id,
       action: 'return_requested',
       entity: 'orders',
-      entityId: params.id,
-      entityName: `Order #${params.id.slice(0, 8)}`,
+      entityId: id,
+      entityName: `Order #${id.slice(0, 8)}`,
       metadata: { reason, total: order.total },
     })
 
