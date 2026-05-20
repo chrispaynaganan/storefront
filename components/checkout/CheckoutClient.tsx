@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { PayPalButton } from '@/components/checkout/PayPalButton'
+import CardForm from '@/components/checkout/CardForm'
 import { logAction } from '@/lib/log-client'
 import clsx from 'clsx'
 
@@ -28,9 +29,9 @@ interface SavedAddress {
   is_default: boolean
 }
 
-export type PaymentMethod = 'gcash' | 'maya' | 'paypal' | 'cod'
+export type PaymentMethod = 'gcash' | 'maya' | 'card' | 'paypal' | 'cod'
 
-// ── Payment method icon components ───────────────────────────────────────────
+// ── Payment method icons ──────────────────────────────────────────────────────
 
 function GCashIcon() {
   return (
@@ -41,11 +42,10 @@ function GCashIcon() {
   )
 }
 
-function MayaIcon() {
+function CardIcon() {
   return (
-    <svg viewBox="0 0 48 48" className="h-6 w-auto" fill="none">
-      <rect width="48" height="48" rx="8" fill="#31B057"/>
-      <text x="50%" y="55%" dominantBaseline="middle" textAnchor="middle" fill="white" fontSize="11" fontWeight="700" fontFamily="Arial,sans-serif">Maya</text>
+    <svg viewBox="0 0 24 24" className="h-5 w-5 text-brown/60" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
     </svg>
   )
 }
@@ -67,13 +67,13 @@ function CODIcon() {
   )
 }
 
-// ── Payment method selector ───────────────────────────────────────────────────
+// ── Payment method list ───────────────────────────────────────────────────────
 
 const PAYMENT_METHODS: { id: PaymentMethod; label: string; sub: string; icon: React.ReactNode }[] = [
-  { id: 'gcash', label: 'GCash', sub: 'E-wallet', icon: <GCashIcon /> },
-  { id: 'maya', label: 'Maya', sub: 'E-wallet', icon: <MayaIcon /> },
-  { id: 'paypal', label: 'PayPal', sub: 'Card / PayPal balance', icon: <PayPalIcon /> },
-  { id: 'cod', label: 'Cash on Delivery', sub: 'Pay when it arrives', icon: <CODIcon /> },
+  { id: 'gcash',  label: 'GCash',            sub: 'E-wallet',              icon: <GCashIcon /> },
+  { id: 'card',   label: 'Credit / Debit Card', sub: 'Visa, Mastercard',   icon: <CardIcon /> },
+  { id: 'paypal', label: 'PayPal',            sub: 'Card / PayPal balance', icon: <PayPalIcon /> },
+  { id: 'cod',    label: 'Cash on Delivery',  sub: 'Pay when it arrives',  icon: <CODIcon /> },
 ]
 
 function PaymentMethodPicker({
@@ -175,6 +175,11 @@ export default function CheckoutClient({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Card intent state
+  const [cardIntentId, setCardIntentId] = useState<string | null>(null)
+  const [cardClientKey, setCardClientKey] = useState<string | null>(null)
+  const [cardIntentLoading, setCardIntentLoading] = useState(false)
+
   function setField(field: keyof AddressForm, value: string) {
     setAddress((prev) => ({ ...prev, [field]: value }))
   }
@@ -240,6 +245,7 @@ export default function CheckoutClient({
     promo_code: promoCode.trim() || undefined,
   }), [address, saveAddress, saveAsDefault, promoCode])
 
+  // ── GCash / Maya ──────────────────────────────────────────────────────────
   async function handleEwallet() {
     const err = validate(); if (err) { setError(err); return }
     setLoading(true); setError(null)
@@ -255,6 +261,30 @@ export default function CheckoutClient({
     } catch (e: any) { setError(e.message); setLoading(false) }
   }
 
+  // ── Card: create intent then show form ────────────────────────────────────
+  async function handleInitCard() {
+    const err = validate(); if (err) { setError(err); return }
+    setCardIntentLoading(true); setError(null)
+    try {
+      const res = await fetch('/api/paymongo/create-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload()),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Failed to initiate card payment')
+      setCardIntentId(data.intent_id)
+      setCardClientKey(data.client_key)
+    } catch (e: any) { setError(e.message) }
+    finally { setCardIntentLoading(false) }
+  }
+
+  async function handleCardSuccess(intentId: string) {
+    // Webhook will create the order; poll pending_paymongo_checkouts like GCash
+    router.push('/checkout/return?status=success&type=card')
+  }
+
+  // ── COD ───────────────────────────────────────────────────────────────────
   async function handleCOD() {
     const err = validate(); if (err) { setError(err); return }
     setLoading(true); setError(null)
@@ -275,6 +305,7 @@ export default function CheckoutClient({
     } catch (e: any) { setError(e.message); setLoading(false) }
   }
 
+  // ── PayPal ────────────────────────────────────────────────────────────────
   async function handlePaypalSuccess(paypalOrderId: string) {
     setLoading(true); setError(null)
     try {
@@ -289,7 +320,7 @@ export default function CheckoutClient({
     } catch (e: any) { setError(e.message); setLoading(false) }
   }
 
-  // ── Rendered: left column (address + promo) ──
+  // ── Left column ───────────────────────────────────────────────────────────
   const leftColumn = (
     <div className="space-y-5">
       <div className="flex items-center justify-between">
@@ -329,7 +360,6 @@ export default function CheckoutClient({
         </div>
       </div>
 
-      {/* Save toggles — appear once address is filled */}
       {isAddressFilled && (
         <div className="space-y-3 rounded-xl border border-whitewash-off bg-whitewash px-4 py-3">
           <label className="flex items-center justify-between cursor-pointer">
@@ -358,20 +388,15 @@ export default function CheckoutClient({
             className="flex-1 rounded-xl border border-whitewash-off bg-white px-4 py-3 text-sm text-brown placeholder:text-brown/40 focus:border-brown focus:outline-none disabled:opacity-60"
           />
           {promoStatus === 'applied' ? (
-            <button
-              type="button"
+            <button type="button"
               onClick={() => { setPromoCode(''); setPromoStatus(null); setPromoMessage('') }}
-              className="shrink-0 rounded-xl border border-brown/30 px-4 py-3 text-sm text-brown/60 hover:text-brown transition-colors"
-            >
+              className="shrink-0 rounded-xl border border-brown/30 px-4 py-3 text-sm text-brown/60 hover:text-brown transition-colors">
               Remove
             </button>
           ) : (
-            <button
-              type="button"
-              onClick={handleApplyPromo}
+            <button type="button" onClick={handleApplyPromo}
               disabled={!promoCode.trim() || applyingPromo}
-              className="shrink-0 rounded-xl bg-brown px-4 py-3 text-sm font-medium text-white hover:bg-brown-light transition-colors disabled:opacity-40"
-            >
+              className="shrink-0 rounded-xl bg-brown px-4 py-3 text-sm font-medium text-white hover:bg-brown-light transition-colors disabled:opacity-40">
               {applyingPromo ? 'Checking…' : 'Apply'}
             </button>
           )}
@@ -385,33 +410,62 @@ export default function CheckoutClient({
     </div>
   )
 
-  // ── Rendered: right column (payment + CTA) ──
+  // ── Right column ──────────────────────────────────────────────────────────
   const rightColumn = (
     <div className="space-y-4">
-      {/* Payment method card */}
       <div className="rounded-2xl bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-xs font-medium uppercase tracking-widest text-brown">Payment</h2>
-        <PaymentMethodPicker selected={paymentMethod} onChange={setPaymentMethod} />
+        <PaymentMethodPicker
+          selected={paymentMethod}
+          onChange={(m) => {
+            setPaymentMethod(m)
+            setError(null)
+            // Reset card intent if switching away
+            if (m !== 'card') {
+              setCardIntentId(null)
+              setCardClientKey(null)
+            }
+          }}
+        />
       </div>
 
-      {/* CTA card */}
       <div className="rounded-2xl bg-white p-6 shadow-sm space-y-3">
         {error && (
           <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
         )}
 
+        {/* GCash */}
         {paymentMethod === 'gcash' && (
           <button onClick={handleEwallet} disabled={loading}
             className="w-full rounded-full bg-[#007DFF] py-3.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50">
             {loading ? 'Redirecting to GCash…' : 'Pay with GCash'}
           </button>
         )}
-        {paymentMethod === 'maya' && (
-          <button onClick={handleEwallet} disabled={loading}
-            className="w-full rounded-full bg-[#31B057] py-3.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50">
-            {loading ? 'Redirecting to Maya…' : 'Pay with Maya'}
-          </button>
+
+        {/* Card */}
+        {paymentMethod === 'card' && (
+          !isAddressFilled ? (
+            <p className="rounded-xl bg-peach-light px-4 py-3 text-sm text-brown">
+              Fill in your delivery address first.
+            </p>
+          ) : cardIntentId && cardClientKey ? (
+            <CardForm
+              intentId={cardIntentId}
+              clientKey={cardClientKey}
+              onSuccess={handleCardSuccess}
+              onError={(msg) => setError(msg)}
+              loading={loading}
+              setLoading={setLoading}
+            />
+          ) : (
+            <button onClick={handleInitCard} disabled={cardIntentLoading}
+              className="w-full rounded-full bg-brown py-3.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50">
+              {cardIntentLoading ? 'Preparing…' : 'Enter Card Details'}
+            </button>
+          )
         )}
+
+        {/* COD */}
         {paymentMethod === 'cod' && (
           <>
             <button onClick={handleCOD} disabled={loading}
@@ -423,6 +477,8 @@ export default function CheckoutClient({
             </p>
           </>
         )}
+
+        {/* PayPal */}
         {paymentMethod === 'paypal' && (
           !isAddressFilled ? (
             <p className="rounded-xl bg-peach-light px-4 py-3 text-sm text-brown">
@@ -442,7 +498,6 @@ export default function CheckoutClient({
 
   return (
     <>
-      {/* Two-column layout lives here so both columns share state */}
       <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-[1fr_380px]">
         <div className="rounded-2xl bg-white p-6 shadow-sm">{leftColumn}</div>
         <div className="flex flex-col gap-4">
