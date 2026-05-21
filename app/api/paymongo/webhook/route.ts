@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createAdminSupabaseClient } from '@/lib/supabase-server'
 import { logActivity } from '@/lib/activity-log'
 import { sendOrderConfirmationEmail } from '@/lib/email/order-confirmation'
+import { sendAdminNewOrderEmail } from '@/lib/email/order-status'
 import crypto from 'crypto'
 
 function verifyPaymongoSignature(rawBody: string, sigHeader: string): boolean {
@@ -183,7 +184,14 @@ async function processOrder(
       .update({ status: 'completed', order_id: order.id })
       .eq('source_id', sourceId)
 
-    // Send confirmation email
+    // Increment promo usage count
+    if (pending.promo_code) {
+      await adminSupabase.rpc('increment_promo_usage', {
+        p_code: pending.promo_code.toUpperCase(),
+      })
+    }
+
+    // Load user profile for emails
     const { data: userProfile } = await adminSupabase
       .from('users')
       .select('email, first_name, full_name')
@@ -191,6 +199,7 @@ async function processOrder(
       .single()
 
     if (userProfile) {
+      // Confirmation email to customer
       await sendOrderConfirmationEmail({
         order_id: order.id,
         customer_name: userProfile.first_name ?? userProfile.full_name ?? 'Customer',
@@ -222,6 +231,16 @@ async function processOrder(
             image_url: imageUrls[0] ?? undefined,
           }
         }),
+      })
+
+      // Notification email to admin
+      await sendAdminNewOrderEmail({
+        order_id: order.id,
+        customer_name: userProfile.first_name ?? userProfile.full_name ?? 'Customer',
+        customer_email: userProfile.email,
+        total: pending.total,
+        payment_method: pending.method,
+        item_count: cartItems.length,
       })
     }
 
@@ -284,7 +303,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing source id' }, { status: 400 })
     }
 
-    // Get pending to know the amount
     const { data: pending } = await adminSupabase
       .from('pending_paymongo_checkouts')
       .select('total')

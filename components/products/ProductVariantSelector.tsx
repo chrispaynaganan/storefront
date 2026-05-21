@@ -28,29 +28,23 @@ export function ProductVariantSelector({ variants, onSelect }: Props) {
   const [selectedSize, setSelectedSize] = useState<string | null>(null)
   const [selectedColor, setSelectedColor] = useState<string | null>(null)
 
-  // All unique sizes
   const sizes = [...new Set(variants.map(v => v.size))]
 
-  // All unique colors across all variants
   const allColors = [...new Set(variants.map(v => v.color).filter(Boolean))] as string[]
   const hasColors = allColors.length > 0
 
-  // Colors available for selected size
   const colorsForSize = selectedSize
     ? variants.filter(v => v.size === selectedSize).map(v => v.color).filter(Boolean) as string[]
     : []
 
-  // In-stock colors for selected size
   const inStockColorsForSize = selectedSize
     ? variants.filter(v => v.size === selectedSize && v.stock_qty > 0).map(v => v.color).filter(Boolean) as string[]
     : []
 
-  // Is a size in stock at all (any color)
   function isSizeInStock(size: string) {
     return variants.some(v => v.size === size && v.stock_qty > 0)
   }
 
-  // Is a size available (has variants)
   function isSizeAvailable(size: string) {
     return variants.some(v => v.size === size)
   }
@@ -67,12 +61,40 @@ export function ProductVariantSelector({ variants, onSelect }: Props) {
     onSelect?.(v ?? null)
   }
 
-  // If no colors — selecting size is enough
   function handleSizeOnlySelect(size: string) {
     setSelectedSize(size)
     const v = variants.find(v => v.size === size)
     onSelect?.(v ?? null)
   }
+
+  // ── Low stock calculation ─────────────────────────────────────────────────
+  // After size (and color if applicable) is chosen, find the lowest stock qty
+  function getLowStockCount(): number | null {
+    if (!selectedSize) return null
+
+    let relevant: Variant[]
+
+    if (hasColors) {
+      if (selectedColor) {
+        // Both size and color selected — check that specific variant
+        relevant = variants.filter(v => v.size === selectedSize && v.color === selectedColor)
+      } else {
+        // Only size selected — check all colors for that size
+        relevant = variants.filter(v => v.size === selectedSize)
+      }
+    } else {
+      // No colors — just check the size variant
+      relevant = variants.filter(v => v.size === selectedSize)
+    }
+
+    const inStock = relevant.filter(v => v.stock_qty > 0)
+    if (inStock.length === 0) return null
+
+    const lowest = Math.min(...inStock.map(v => v.stock_qty))
+    return lowest <= 3 ? lowest : null
+  }
+
+  const lowStockCount = getLowStockCount()
 
   return (
     <div className="space-y-5 mt-6">
@@ -111,6 +133,13 @@ export function ProductVariantSelector({ variants, onSelect }: Props) {
             )
           })}
         </div>
+
+        {/* Low stock warning — shows after size selected (no colors), or after both selected */}
+        {lowStockCount !== null && (!hasColors || selectedColor) && (
+          <p className="text-xs text-amber-600 font-medium mt-2">
+            Only {lowStockCount} left in this size
+          </p>
+        )}
       </div>
 
       {/* Color selector — only shows after size is picked */}
@@ -146,7 +175,6 @@ export function ProductVariantSelector({ variants, onSelect }: Props) {
                   )}
                   style={{ backgroundColor: color }}
                 >
-                  {/* Out of stock slash */}
                   {availableForSize && !inStockForSize && (
                     <span className="absolute inset-0 flex items-center justify-center">
                       <svg className="w-full h-full" viewBox="0 0 36 36">
@@ -154,7 +182,6 @@ export function ProductVariantSelector({ variants, onSelect }: Props) {
                       </svg>
                     </span>
                   )}
-                  {/* Not available for this size */}
                   {!availableForSize && (
                     <span className="absolute inset-0 flex items-center justify-center">
                       <svg className="w-full h-full" viewBox="0 0 36 36">
@@ -166,8 +193,16 @@ export function ProductVariantSelector({ variants, onSelect }: Props) {
               )
             })}
           </div>
+
           {selectedSize && !selectedColor && (
             <p className="text-xs text-brown/40 mt-2">Select a color to continue</p>
+          )}
+
+          {/* Low stock warning — shows after both size and color selected */}
+          {selectedColor && lowStockCount !== null && (
+            <p className="text-xs text-amber-600 font-medium mt-2">
+              Only {lowStockCount} left in this color
+            </p>
           )}
         </div>
       )}

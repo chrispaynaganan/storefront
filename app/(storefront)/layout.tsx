@@ -4,6 +4,7 @@ import { CartProvider } from '@/context/CartContext'
 import { ToastProvider } from '@/context/ToastContext'
 import { getUser } from '@/lib/auth'
 import { createServerSupabaseClient } from '@/lib/supabase-server'
+import { CookieConsent } from '@/components/ui/CookieConsent'
 
 export default async function StorefrontLayout({ children }: { children: React.ReactNode }) {
   const user = await getUser()

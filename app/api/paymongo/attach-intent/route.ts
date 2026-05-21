@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase-server'
 import { logActivity } from '@/lib/activity-log'
 import { sendOrderConfirmationEmail } from '@/lib/email/order-confirmation'
+import { sendAdminNewOrderEmail } from '@/lib/email/order-status'
 
 const PAYMONGO_SECRET = process.env.PAYMONGO_SECRET_KEY!
 const PAYMONGO_BASE = 'https://api.paymongo.com/v1'
@@ -205,7 +206,14 @@ export async function POST(req: NextRequest) {
         .update({ status: 'completed', order_id: order.id })
         .eq('source_id', intent_id)
 
-      // Send confirmation email
+      // Increment promo usage count
+      if (pending.promo_code) {
+        await adminSupabase.rpc('increment_promo_usage', {
+          p_code: pending.promo_code.toUpperCase(),
+        })
+      }
+
+      // Load user profile for emails
       const { data: userProfile } = await adminSupabase
         .from('users')
         .select('email, first_name, full_name')
@@ -213,6 +221,7 @@ export async function POST(req: NextRequest) {
         .single()
 
       if (userProfile) {
+        // Confirmation email to customer
         await sendOrderConfirmationEmail({
           order_id: order.id,
           customer_name: userProfile.first_name ?? userProfile.full_name ?? 'Customer',
@@ -244,6 +253,16 @@ export async function POST(req: NextRequest) {
               image_url: imageUrls[0] ?? undefined,
             }
           }),
+        })
+
+        // Notification email to admin
+        await sendAdminNewOrderEmail({
+          order_id: order.id,
+          customer_name: userProfile.first_name ?? userProfile.full_name ?? 'Customer',
+          customer_email: userProfile.email,
+          total: pending.total,
+          payment_method: 'card',
+          item_count: cartItems.length,
         })
       }
 

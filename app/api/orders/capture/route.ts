@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient, createAdminSupabaseClient } from "@/lib/supabase-server";
 import { sendOrderConfirmationEmail, OrderConfirmationItem } from "@/lib/email/order-confirmation";
+import { sendAdminNewOrderEmail } from "@/lib/email/order-status";
 import { logActivity } from "@/lib/activity-log";
 
 const PAYPAL_BASE =
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Parse body — address data comes in directly, no pre-insert needed
+    // 2. Parse body
     const body = await req.json();
     const { paypal_order_id, address: addressData, promo_code } = body as {
       paypal_order_id: string;
@@ -135,7 +136,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 6. Save address using admin client (bypasses RLS)
+    // 6. Save address
     const { data: savedAddress, error: addrError } = await adminSupabase
       .from("addresses")
       .insert({
@@ -175,6 +176,7 @@ export async function POST(req: NextRequest) {
 
     // 8. Resolve promo discount
     let discount = 0;
+    let appliedPromo: any = null;
 
     if (promo_code) {
       const { data: promo } = await supabase
@@ -187,14 +189,18 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (promo) {
-        const subtotalRaw = cartItems.reduce(
-          (sum, item) => sum + (item.variants as any).price * item.qty,
-          0
-        );
-        discount =
-          promo.type === "percent"
-            ? Math.round((subtotalRaw * promo.value) / 100 * 100) / 100
-            : promo.value;
+        // Check usage limit
+        if (promo.max_usage === null || promo.usage_count < promo.max_usage) {
+          appliedPromo = promo;
+          const subtotalRaw = cartItems.reduce(
+            (sum, item) => sum + (item.variants as any).price * item.qty,
+            0
+          );
+          discount =
+            promo.type === "percent"
+              ? Math.round((subtotalRaw * promo.value) / 100 * 100) / 100
+              : promo.value;
+        }
       }
     }
 
@@ -241,7 +247,12 @@ export async function POST(req: NextRequest) {
     // 12. Clear cart
     await adminSupabase.from("cart_items").delete().eq("user_id", user.id);
 
-    // 13. Load user profile for email
+    // 13. Increment promo usage count
+    if (appliedPromo) {
+      await adminSupabase.rpc("increment_promo_usage", { p_code: appliedPromo.code });
+    }
+
+    // 14. Load user profile for emails
     const { data: profile } = await adminSupabase
       .from("users")
       .select("full_name, first_name, email")
@@ -251,7 +262,7 @@ export async function POST(req: NextRequest) {
     const customerName = profile?.first_name ?? profile?.full_name ?? "there";
     const customerEmail = profile?.email ?? user.email ?? "";
 
-    // 14. Send confirmation email
+    // 15. Send confirmation email to customer
     const emailItems: OrderConfirmationItem[] = cartItems.map((item) => {
       const v = item.variants as any;
       const p = v.products;
@@ -291,7 +302,17 @@ export async function POST(req: NextRequest) {
       console.error("[Email] Confirmation failed:", emailResult.error);
     }
 
-    // 15. Log activity
+    // 16. Send notification email to admin
+    await sendAdminNewOrderEmail({
+      order_id: order.id,
+      customer_name: customerName,
+      customer_email: customerEmail,
+      total,
+      payment_method: "paypal",
+      item_count: cartItems.length,
+    });
+
+    // 17. Log activity
     await logActivity({
       userId: user.id,
       userName: customerName,

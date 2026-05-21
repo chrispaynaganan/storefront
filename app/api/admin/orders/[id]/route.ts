@@ -1,6 +1,13 @@
+// app/api/admin/orders/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerSupabaseClient, createAdminSupabaseClient } from '@/lib/supabase-server'
 import { logActivity } from '@/lib/activity-log'
+import { sendOrderStatusEmail } from '@/lib/email/order-status'
+
+const STATUS_EMAIL_TRIGGERS = new Set([
+  'packed', 'shipped', 'out_for_delivery', 'delivered',
+  'cancelled', 'return_requested', 'refunded',
+])
 
 export async function PATCH(
   req: NextRequest,
@@ -27,10 +34,9 @@ export async function PATCH(
 
     const adminSupabase = await createAdminSupabaseClient()
 
-    // Get current order for logging
     const { data: current } = await adminSupabase
       .from('orders')
-      .select('status, courier, tracking_number')
+      .select('status, courier, tracking_number, user_id, total')
       .eq('id', id)
       .single()
 
@@ -42,15 +48,8 @@ export async function PATCH(
     if (tracking_number !== undefined) updates.tracking_number = tracking_number
     if (status === 'delivered') updates.delivered_at = delivered_at ?? new Date().toISOString()
 
-    const { error } = await adminSupabase
-      .from('orders')
-      .update(updates)
-      .eq('id', id)
-
-    if (error) {
-      console.error('Order update error:', error)
-      return NextResponse.json({ error: 'Failed to update order' }, { status: 500 })
-    }
+    const { error } = await adminSupabase.from('orders').update(updates).eq('id', id)
+    if (error) return NextResponse.json({ error: 'Failed to update order' }, { status: 500 })
 
     const userName = profile.first_name ?? profile.full_name ?? user.email
     await logActivity({
@@ -68,6 +67,26 @@ export async function PATCH(
         ])
       ),
     })
+
+    // Send status-change email to customer
+    if (status && STATUS_EMAIL_TRIGGERS.has(status) && status !== current.status) {
+      const { data: customer } = await adminSupabase
+        .from('users')
+        .select('email, first_name, full_name')
+        .eq('id', current.user_id)
+        .single()
+
+      if (customer) {
+        await sendOrderStatusEmail(status, {
+          order_id: id,
+          customer_name: customer.first_name ?? customer.full_name ?? 'there',
+          customer_email: customer.email,
+          total: current.total,
+          courier: updates.courier ?? current.courier,
+          tracking_number: updates.tracking_number ?? current.tracking_number,
+        })
+      }
+    }
 
     return NextResponse.json({ success: true })
   } catch (err) {
