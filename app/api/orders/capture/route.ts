@@ -50,13 +50,11 @@ export async function POST(req: NextRequest) {
     const supabase = await createServerSupabaseClient();
     const adminSupabase = await createAdminSupabaseClient();
 
-    // 1. Auth check
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // 2. Parse body
     const body = await req.json();
     const { paypal_order_id, address: addressData, promo_code } = body as {
       paypal_order_id: string;
@@ -80,7 +78,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Load cart items
     const { data: cartItems, error: cartError } = await supabase
       .from("cart_items")
       .select(`
@@ -111,7 +108,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
 
-    // 4. Stock check before capture
     const outOfStock = cartItems.filter((item) => {
       const v = item.variants as any;
       return !v || v.stock_qty < item.qty;
@@ -125,7 +121,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 5. Capture PayPal payment
     const accessToken = await getPayPalAccessToken();
     const captureResult = await capturePayPalOrder(paypal_order_id, accessToken);
 
@@ -136,7 +131,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 6. Save address
     const { data: savedAddress, error: addrError } = await adminSupabase
       .from("addresses")
       .insert({
@@ -153,11 +147,9 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (addrError || !savedAddress) {
-      console.error("[Capture] Address insert failed:", addrError);
       throw new Error("Failed to save address");
     }
 
-    // 7. Atomically decrement stock
     const stockItems = cartItems.map((item) => ({
       variant_id: item.variant_id,
       qty: item.qty,
@@ -168,13 +160,10 @@ export async function POST(req: NextRequest) {
       { p_items: stockItems }
     );
 
-    if (stockError) {
-      console.error("[CRITICAL] Stock decrement error:", stockError);
-    } else if (!stockResult?.success) {
-      console.error("[CRITICAL] Partial stock failure:", stockResult);
-    }
+    if (stockError) console.error("[CRITICAL] Stock decrement error:", stockError);
+    else if (!stockResult?.success) console.error("[CRITICAL] Partial stock failure:", stockResult);
 
-    // 8. Resolve promo discount
+    // Resolve promo discount with global + per-user checks
     let discount = 0;
     let appliedPromo: any = null;
 
@@ -189,8 +178,16 @@ export async function POST(req: NextRequest) {
         .single();
 
       if (promo) {
-        // Check usage limit
-        if (promo.max_usage === null || promo.usage_count < promo.max_usage) {
+        const withinGlobalLimit = promo.max_usage === null || promo.usage_count < promo.max_usage
+
+        const { data: existingUsage } = await supabase
+          .from('promo_usages')
+          .select('id')
+          .eq('promo_id', promo.id)
+          .eq('user_id', user.id)
+          .single()
+
+        if (withinGlobalLimit && !existingUsage) {
           appliedPromo = promo;
           const subtotalRaw = cartItems.reduce(
             (sum, item) => sum + (item.variants as any).price * item.qty,
@@ -204,14 +201,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 9. Calculate totals
     const subtotal = cartItems.reduce(
       (sum, item) => sum + (item.variants as any).price * item.qty,
       0
     );
     const total = Math.max(0, subtotal - discount);
 
-    // 10. Create order
     const { data: order, error: orderError } = await adminSupabase
       .from("orders")
       .insert({
@@ -229,7 +224,6 @@ export async function POST(req: NextRequest) {
 
     if (orderError) throw orderError;
 
-    // 11. Create order_items
     const orderItems = cartItems.map((item) => {
       const v = item.variants as any;
       return {
@@ -244,15 +238,18 @@ export async function POST(req: NextRequest) {
     const { error: itemsError } = await adminSupabase.from("order_items").insert(orderItems);
     if (itemsError) throw itemsError;
 
-    // 12. Clear cart
     await adminSupabase.from("cart_items").delete().eq("user_id", user.id);
 
-    // 13. Increment promo usage count
+    // Increment global usage count + record per-user usage
     if (appliedPromo) {
       await adminSupabase.rpc("increment_promo_usage", { p_code: appliedPromo.code });
+      await adminSupabase.from("promo_usages").insert({
+        promo_id: appliedPromo.id,
+        user_id: user.id,
+        order_id: order.id,
+      });
     }
 
-    // 14. Load user profile for emails
     const { data: profile } = await adminSupabase
       .from("users")
       .select("full_name, first_name, email")
@@ -262,7 +259,6 @@ export async function POST(req: NextRequest) {
     const customerName = profile?.first_name ?? profile?.full_name ?? "there";
     const customerEmail = profile?.email ?? user.email ?? "";
 
-    // 15. Send confirmation email to customer
     const emailItems: OrderConfirmationItem[] = cartItems.map((item) => {
       const v = item.variants as any;
       const p = v.products;
@@ -302,7 +298,6 @@ export async function POST(req: NextRequest) {
       console.error("[Email] Confirmation failed:", emailResult.error);
     }
 
-    // 16. Send notification email to admin
     await sendAdminNewOrderEmail({
       order_id: order.id,
       customer_name: customerName,
@@ -312,7 +307,6 @@ export async function POST(req: NextRequest) {
       item_count: cartItems.length,
     });
 
-    // 17. Log activity
     await logActivity({
       userId: user.id,
       userName: customerName,

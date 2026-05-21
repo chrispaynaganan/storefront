@@ -39,7 +39,6 @@ export async function POST(req: NextRequest) {
 
     const returnUrl = `${SITE_URL}/checkout/return?status=success&type=card`
 
-    // Attach payment method to intent
     const attachRes = await fetch(
       `${PAYMONGO_BASE}/payment_intents/${intent_id}/attach`,
       {
@@ -67,7 +66,6 @@ export async function POST(req: NextRequest) {
     const status: string = attachJson.data.attributes.status
     const nextAction = attachJson.data.attributes.next_action
 
-    // 3DS required — return redirect URL to client, order created by webhook later
     if (status === 'awaiting_next_action' && nextAction?.type === 'redirect') {
       return NextResponse.json({
         status: '3ds_required',
@@ -75,14 +73,12 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Payment succeeded without 3DS — create order immediately
     if (status === 'succeeded') {
       const payments = attachJson.data.attributes.payments ?? []
       const paymongoPaymentId: string = payments[0]?.id ?? intent_id
 
       const adminSupabase = await createAdminSupabaseClient()
 
-      // Get pending checkout
       const { data: pending, error: pendingError } = await adminSupabase
         .from('pending_paymongo_checkouts')
         .select('*')
@@ -95,13 +91,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Pending checkout not found' }, { status: 404 })
       }
 
-      // Mark processing
       await adminSupabase
         .from('pending_paymongo_checkouts')
         .update({ status: 'processing' })
         .eq('source_id', intent_id)
 
-      // Fetch cart items
       const { data: cartItems, error: cartError } = await adminSupabase
         .from('cart_items')
         .select(`
@@ -126,7 +120,6 @@ export async function POST(req: NextRequest) {
         throw new Error('Cart is empty')
       }
 
-      // Decrement stock
       const stockItems = cartItems.map((ci: any) => ({
         variant_id: ci.variant_id,
         qty: ci.qty,
@@ -141,7 +134,6 @@ export async function POST(req: NextRequest) {
         throw new Error('Stock decrement failed — insufficient stock')
       }
 
-      // Save address
       const addr = pending.address
       const { data: savedAddress, error: addrError } = await adminSupabase
         .from('addresses')
@@ -162,7 +154,6 @@ export async function POST(req: NextRequest) {
         throw new Error('Failed to save address')
       }
 
-      // Create order
       const { data: order, error: orderError } = await adminSupabase
         .from('orders')
         .insert({
@@ -185,7 +176,6 @@ export async function POST(req: NextRequest) {
         throw new Error(`Failed to create order: ${JSON.stringify(orderError)}`)
       }
 
-      // Create order items
       const orderItems = cartItems.map((ci: any) => {
         const variant = ci.variant as any
         return {
@@ -200,20 +190,32 @@ export async function POST(req: NextRequest) {
       await adminSupabase.from('order_items').insert(orderItems)
       await adminSupabase.from('cart_items').delete().eq('user_id', pending.user_id)
 
-      // Mark completed
       await adminSupabase
         .from('pending_paymongo_checkouts')
         .update({ status: 'completed', order_id: order.id })
         .eq('source_id', intent_id)
 
-      // Increment promo usage count
+      // Increment global usage count + record per-user usage
       if (pending.promo_code) {
         await adminSupabase.rpc('increment_promo_usage', {
           p_code: pending.promo_code.toUpperCase(),
         })
+        // Look up promo id for per-user record
+        const { data: promo } = await adminSupabase
+          .from('promos')
+          .select('id')
+          .eq('code', pending.promo_code.toUpperCase())
+          .single()
+
+        if (promo) {
+          await adminSupabase.from('promo_usages').insert({
+            promo_id: promo.id,
+            user_id: pending.user_id,
+            order_id: order.id,
+          })
+        }
       }
 
-      // Load user profile for emails
       const { data: userProfile } = await adminSupabase
         .from('users')
         .select('email, first_name, full_name')
@@ -221,7 +223,6 @@ export async function POST(req: NextRequest) {
         .single()
 
       if (userProfile) {
-        // Confirmation email to customer
         await sendOrderConfirmationEmail({
           order_id: order.id,
           customer_name: userProfile.first_name ?? userProfile.full_name ?? 'Customer',
@@ -255,7 +256,6 @@ export async function POST(req: NextRequest) {
           }),
         })
 
-        // Notification email to admin
         await sendAdminNewOrderEmail({
           order_id: order.id,
           customer_name: userProfile.first_name ?? userProfile.full_name ?? 'Customer',
@@ -279,7 +279,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: 'succeeded', order_id: order.id })
     }
 
-    // Payment failed
     return NextResponse.json({
       status: 'failed',
       error: attachJson.data.attributes.last_payment_error?.failed_message ?? 'Payment failed',

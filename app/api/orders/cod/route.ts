@@ -28,7 +28,6 @@ export async function POST(req: NextRequest) {
       promo_code?: string
     }
 
-    // Fetch cart with full variant + product info needed for email
     const { data: cartItems, error: cartError } = await supabase
       .from('cart_items')
       .select(
@@ -55,7 +54,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Cart is empty' }, { status: 400 })
     }
 
-    // Validate stock
     for (const item of cartItems) {
       const variant = item.variant as any
       if (!variant || variant.stock_qty < item.qty) {
@@ -66,7 +64,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Calculate totals
     let subtotal = 0
     for (const item of cartItems) {
       const variant = item.variant as any
@@ -83,12 +80,22 @@ export async function POST(req: NextRequest) {
         .eq('code', promo_code.toUpperCase())
         .eq('is_active', true)
         .lte('starts_at', new Date().toISOString())
-        .gte('ends_at', new Date().toISOString())
+        .or(`ends_at.is.null,ends_at.gte.${new Date().toISOString()}`)
         .single()
 
       if (promo) {
-        // Check usage limit
-        if (promo.max_usage === null || promo.usage_count < promo.max_usage) {
+        // Check global usage limit
+        const withinGlobalLimit = promo.max_usage === null || promo.usage_count < promo.max_usage
+
+        // Check per-user usage
+        const { data: existingUsage } = await supabase
+          .from('promo_usages')
+          .select('id')
+          .eq('promo_id', promo.id)
+          .eq('user_id', user.id)
+          .single()
+
+        if (withinGlobalLimit && !existingUsage) {
           appliedPromo = promo
           discount =
             promo.type === 'percent'
@@ -102,7 +109,6 @@ export async function POST(req: NextRequest) {
 
     const adminSupabase = await createAdminSupabaseClient()
 
-    // Decrement stock atomically
     const stockItems = cartItems.map((ci) => ({
       variant_id: (ci.variant as any).id,
       qty: ci.qty,
@@ -120,7 +126,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Save address
     const { data: savedAddress, error: addrError } = await adminSupabase
       .from('addresses')
       .insert({
@@ -140,7 +145,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to save address' }, { status: 500 })
     }
 
-    // Create order
     const { data: order, error: orderError } = await adminSupabase
       .from('orders')
       .insert({
@@ -161,7 +165,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to create order' }, { status: 500 })
     }
 
-    // Create order items
     const orderItems = cartItems.map((ci) => {
       const variant = ci.variant as any
       return {
@@ -174,18 +177,18 @@ export async function POST(req: NextRequest) {
     })
 
     await adminSupabase.from('order_items').insert(orderItems)
-
-    // Clear cart
     await adminSupabase.from('cart_items').delete().eq('user_id', user.id)
 
-    // Increment promo usage count
+    // Increment global usage count + record per-user usage
     if (appliedPromo) {
-      await adminSupabase.rpc('increment_promo_usage', {
-        p_code: appliedPromo.code,
+      await adminSupabase.rpc('increment_promo_usage', { p_code: appliedPromo.code })
+      await adminSupabase.from('promo_usages').insert({
+        promo_id: appliedPromo.id,
+        user_id: user.id,
+        order_id: order.id,
       })
     }
 
-    // Fetch user profile for emails
     const { data: userProfile } = await adminSupabase
       .from('users')
       .select('email, first_name, full_name')
@@ -193,7 +196,6 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (userProfile) {
-      // Confirmation email to customer
       await sendOrderConfirmationEmail({
         order_id: order.id,
         customer_name: userProfile.first_name ?? userProfile.full_name ?? 'Customer',
@@ -227,7 +229,6 @@ export async function POST(req: NextRequest) {
         }),
       })
 
-      // Notification email to admin
       await sendAdminNewOrderEmail({
         order_id: order.id,
         customer_name: userProfile.first_name ?? userProfile.full_name ?? 'Customer',
