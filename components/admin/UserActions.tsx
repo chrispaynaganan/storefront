@@ -33,7 +33,7 @@ export function UserActions({ userId, isActive, role }: Props) {
         {isActive ? 'Deactivate' : 'Activate'}
       </button>
       <button onClick={toggleRole} disabled={loading}
-        className="text-xs text-[#6B3A22] hover:text-[#3B1F0E] underline">
+        className="text-xs text-brown-light hover:text-brown underline">
         Make {role === 'admin' ? 'customer' : 'admin'}
       </button>
     </div>
