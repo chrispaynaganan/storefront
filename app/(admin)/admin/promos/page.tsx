@@ -15,7 +15,7 @@ interface Product { id: string; name: string }
 interface Promo {
   id: string
   code: string
-  type: 'percentage' | 'fixed'
+  type: 'percent' | 'fixed'
   value: number
   starts_at: string | null
   ends_at: string | null
@@ -83,7 +83,9 @@ function PromoModal({ mode, promo, products, onClose, onSaved }: {
 }) {
   const supabase = createClient()
   const [code, setCode] = useState(promo?.code ?? '')
-  const [type, setType] = useState<'percent' | 'fixed'>(promo?.type ?? 'percent')
+  const [type, setType] = useState<'percent' | 'fixed'>(
+  (promo?.type === 'percent' ? 'percent' : promo?.type) ?? 'percent'
+)
   const [value, setValue] = useState(String(promo?.value ?? ''))
   const [productId, setProductId] = useState(promo?.product_id ?? '')
   const [startsAt, setStartsAt] = useState(promo?.starts_at ? promo.starts_at.slice(0, 10) : '')
@@ -160,7 +162,7 @@ function PromoModal({ mode, promo, products, onClose, onSaved }: {
           <div className="grid grid-cols-2 gap-3">
             <Field label="Type">
               <SelectInput value={type} onChange={e => setType(e.target.value as 'percent' | 'fixed')}>
-                <option value="percent">Percentage (%)</option>
+                <option value="percent">Percent (%)</option>
                 <option value="fixed">Fixed (PHP)</option>
               </SelectInput>
             </Field>
@@ -312,7 +314,7 @@ export default function AdminPromosPage() {
                   <tr key={p.id} className={cn('border-b border-whitewash-off last:border-0', i % 2 === 0 ? 'bg-white' : 'bg-whitewash/40')}>
                     <td className="px-5 py-4 font-mono font-semibold text-brown">{p.code}</td>
                     <td className="px-5 py-4 text-brown capitalize">{p.type}</td>
-                    <td className="px-5 py-4 text-brown">{p.type === 'percentage' ? `${p.value}%` : `₱${p.value}`}</td>
+                    <td className="px-5 py-4 text-brown">{p.type === 'percent' ? `${p.value}%` : `₱${p.value}`}</td>
                     <td className="px-5 py-4 text-brown">{p.products?.name ?? 'All products'}</td>
                     <td className="px-5 py-4 text-brown/60">{p.ends_at ? formatDate(p.ends_at) : '—'}</td>
                     <td className="px-5 py-4"><ActiveBadge active={p.is_active} /></td>
