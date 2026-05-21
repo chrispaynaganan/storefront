@@ -83,7 +83,7 @@ function PromoModal({ mode, promo, products, onClose, onSaved }: {
 }) {
   const supabase = createClient()
   const [code, setCode] = useState(promo?.code ?? '')
-  const [type, setType] = useState<'percentage' | 'fixed'>(promo?.type ?? 'percentage')
+  const [type, setType] = useState<'percent' | 'fixed'>(promo?.type ?? 'percent')
   const [value, setValue] = useState(String(promo?.value ?? ''))
   const [productId, setProductId] = useState(promo?.product_id ?? '')
   const [startsAt, setStartsAt] = useState(promo?.starts_at ? promo.starts_at.slice(0, 10) : '')
@@ -159,12 +159,12 @@ function PromoModal({ mode, promo, products, onClose, onSaved }: {
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Type">
-              <SelectInput value={type} onChange={e => setType(e.target.value as 'percentage' | 'fixed')}>
-                <option value="percentage">Percentage (%)</option>
+              <SelectInput value={type} onChange={e => setType(e.target.value as 'percent' | 'fixed')}>
+                <option value="percent">Percentage (%)</option>
                 <option value="fixed">Fixed (PHP)</option>
               </SelectInput>
             </Field>
-            <Field label={type === 'percentage' ? 'Discount (%)' : 'Discount (PHP)'}>
+            <Field label={type === 'percent' ? 'Discount (%)' : 'Discount (PHP)'}>
               <TextInput type="number" placeholder="20" value={value} onChange={e => setValue(e.target.value)} />
             </Field>
           </div>
@@ -289,7 +289,7 @@ export default function AdminPromosPage() {
                 </div>
                 <div className="grid grid-cols-3 gap-2 pt-1 border-t border-gray-50">
                   <div><p className="text-xs text-brown/40">Type</p><p className="text-sm font-semibold text-brown capitalize">{p.type}</p></div>
-                  <div><p className="text-xs text-brown/40">Value</p><p className="text-sm font-semibold text-brown">{p.type === 'percentage' ? `${p.value}%` : `₱${p.value}`}</p></div>
+                  <div><p className="text-xs text-brown/40">Value</p><p className="text-sm font-semibold text-brown">{p.type === 'percent' ? `${p.value}%` : `₱${p.value}`}</p></div>
                   <div><p className="text-xs text-brown/40">Applies to</p><p className="text-sm font-semibold text-brown truncate">{p.products?.name ?? 'All'}</p></div>
                 </div>
                 {p.ends_at && <p className="text-xs text-brown/40">Expires {formatDate(p.ends_at)}</p>}

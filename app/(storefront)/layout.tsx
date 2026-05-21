@@ -34,6 +34,7 @@ export default async function StorefrontLayout({ children }: { children: React.R
           <Navbar user={user} hasSale={hasSale} />
           <main className="flex-1">{children}</main>
           <Footer />
+          <CookieConsent />
         </div>
       </CartProvider>
     </ToastProvider>
